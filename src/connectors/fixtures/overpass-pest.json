@@ -1,0 +1,33 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 2001,
+      "tags": {
+        "name": "Gödöllő Klímacentrum Kft.",
+        "craft": "hvac",
+        "description": "Légkondicionáló szerelés és szellőztetés",
+        "contact:email": "info@godolloklima.hu",
+        "contact:phone": "+36 28 410 100",
+        "addr:postcode": "2100",
+        "addr:city": "Gödöllő",
+        "addr:street": "Dózsa György út",
+        "addr:housenumber": "12"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2002,
+      "tags": {
+        "name": "Érd Takarító Szövetkezet",
+        "office": "company",
+        "description": "Irodatakarítás, tisztítás",
+        "contact:email": "kapcsolat@erdtakarito.hu",
+        "addr:postcode": "2030",
+        "addr:city": "Érd",
+        "addr:street": "Budai út",
+        "addr:housenumber": "5"
+      }
+    }
+  ]
+}

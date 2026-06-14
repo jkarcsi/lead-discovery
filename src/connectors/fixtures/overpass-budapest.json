@@ -1,0 +1,116 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 1001,
+      "tags": {
+        "name": "Tiszta Iroda Kft.",
+        "office": "company",
+        "description": "Irodatakarítás és higiéniai szolgáltatás",
+        "contact:email": "info@tisztairoda.hu",
+        "contact:phone": "+36 1 234 5678",
+        "contact:website": "https://tisztairoda.hu",
+        "addr:postcode": "1054",
+        "addr:city": "Budapest",
+        "addr:street": "Báthory utca",
+        "addr:housenumber": "10",
+        "ref:vatin": "HU10773381"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1002,
+      "tags": {
+        "name": "KlímaProfi Bt.",
+        "craft": "hvac",
+        "description": "Klíma telepítés és karbantartás, hűtés-fűtés",
+        "phone": "06 30 111 2233",
+        "website": "www.klimaprofi.hu",
+        "addr:postcode": "1132",
+        "addr:city": "Budapest",
+        "addr:street": "Váci út",
+        "addr:housenumber": "44"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1003,
+      "tags": {
+        "name": "Őrszem Vagyonvédelem Zrt.",
+        "office": "security",
+        "description": "Őrzés-védelem, portaszolgálat, beléptetés",
+        "email": "iroda@orszem-security.hu",
+        "addr:postcode": "1095",
+        "addr:city": "Budapest",
+        "addr:street": "Soroksári út",
+        "addr:housenumber": "30"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1004,
+      "tags": {
+        "name": "Nagy Péter e.v.",
+        "craft": "electrician",
+        "description": "Tűzvédelem, tűzjelző rendszerek karbantartása",
+        "contact:email": "nagy.peter@gmail.com",
+        "contact:phone": "+3620 987 6543",
+        "addr:postcode": "1188",
+        "addr:city": "Budapest"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1005,
+      "tags": {
+        "name": "ITSzerviz Megoldások Kft.",
+        "office": "it",
+        "description": "IT üzemeltetés, rendszergazda, hálózat és szerver support",
+        "contact:email": "support@itszerviz.hu",
+        "contact:website": "https://itszerviz.hu",
+        "addr:postcode": "1117",
+        "addr:city": "Budapest",
+        "addr:street": "Bartók Béla út",
+        "addr:housenumber": "152"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1006,
+      "tags": {
+        "name": "MunkaVéd Tanácsadó Kft.",
+        "office": "consulting",
+        "description": "Munkavédelem és kockázatértékelés, üzemorvosi koordináció",
+        "contact:email": "info@munkaved.hu",
+        "addr:postcode": "1067",
+        "addr:city": "Budapest",
+        "addr:street": "Teréz körút",
+        "addr:housenumber": "7"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1007,
+      "tags": {
+        "name": "Belváros Pékség",
+        "shop": "bakery",
+        "addr:postcode": "1051",
+        "addr:city": "Budapest"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1008,
+      "tags": {
+        "name": "Tiszta Iroda Kft.",
+        "office": "company",
+        "shop": "cleaning",
+        "description": "takarítás",
+        "contact:phone": "+36 1 234 5678",
+        "ref:vatin": "HU10773381",
+        "addr:postcode": "1054",
+        "addr:city": "Budapest"
+      }
+    }
+  ]
+}

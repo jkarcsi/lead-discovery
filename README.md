@@ -16,14 +16,21 @@ Procura repo (`docs/lead-discovery-plan.md`).
 
 ## Status
 
-Early scaffold. Implemented so far:
+**Phase 1 (open-data collection MVP) is complete and green.** Implemented:
 
 - Domain model (`prisma/schema.prisma`): `Lead`, `Suppression`, `AuditEvent`
 - Procura-aligned taxonomy (`src/taxonomy.ts`) — identical category/region ids
-- Pure libraries: `normalize`, `categorize`, `dedupe`
-- Connectors: OSM Overpass (Tier-1, ODbL) with offline fixture
-- Pipeline `ingest` + compliance (`suppression`, `audit`) + CLI
-- Unit tests for the pure libraries
+- Pure libraries: `normalize`, `categorize` (+ region detection), `dedupe`
+  (VAT→domain→name key + merge), `quality` (0–100 score)
+- Polite `fetcher` (identified UA, per-domain rate limit, robots.txt honored)
+- Connectors: OSM Overpass (Tier-1, ODbL) with offline fixtures + live mode
+- Pipeline `ingest` (transform → suppression → dedupe-merge → store + audit)
+- Compliance: `suppression` (global do-not-contact, checked at ingest) + `audit`
+- Operator CLI: `collect` / `list` / `stats` / `suppress` (no outreach — gated)
+- Unit tests (vitest) for the pure libraries
+
+Roadmap and run history: `ROUTINE_PROMPT.md`. **No outreach** is built or
+enabled — that phase is gated on counsel sign-off (`docs/LEGAL.md`).
 
 ## Quickstart
 
@@ -53,17 +60,7 @@ Stack: Node + TypeScript + Prisma (SQLite in dev, Postgres in prod). The
 taxonomy and categorization mirror Procura so leads slot straight into its
 matching.
 
-## Note on this folder
+## License
 
-This project is intended to live in its **own repository**
-(`github.com/jkarcsi/lead-discovery`). It currently sits in the Procura repo
-under `lead-discovery/` only because the dedicated repo was not reachable from
-the build session. It is fully self-contained (own `package.json`, `tsconfig`,
-`prisma`) and excluded from the Procura web build. To extract it:
-
-```bash
-git subtree split --prefix=lead-discovery -b lead-discovery-export
-git push git@github.com:jkarcsi/lead-discovery.git lead-discovery-export:main
-```
-
-(or simply copy the folder into the new repo).
+Proprietary — see `LICENSE`. OSM-derived data is ODbL and requires attribution
+(© OpenStreetMap contributors).
