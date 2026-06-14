@@ -7,7 +7,7 @@ a buyer's Procura RFQ can also reach relevant **not-yet-registered** suppliers
 every run, follow it, and keep it up to date** — especially the phase checklist
 and the **status log at the bottom**.
 
-Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-39ybva`
+Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-2lg214`
 Strategy doc: `docs/lead-discovery-plan.md` in the `jkarcsi/procurement-network` repo.
 
 ## Mission
@@ -41,9 +41,10 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       limit), `overpass` connector (fixture + live), `ingest` pipeline
       (transform → suppression → dedupe-merge → store + audit), `suppression`
       + `audit` compliance, operator CLI, unit tests. **Done & green.**
-- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** widen Overpass area
-      mappings to all 19 counties; add company-registry / NAV-VIES / KSH-TEÁOR /
-      MKIK connectors (ToS/licence permitting); embeddings-assisted categorization.
+- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** ~~widen Overpass area
+      mappings to all 19 counties~~ (done, run 2 — derived from REGIONS so it can't
+      drift); add company-registry / NAV-VIES / KSH-TEÁOR / MKIK connectors
+      (ToS/licence permitting); embeddings-assisted categorization.
 - [ ] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
       (robots/ToS-gated), VAT/VIES verification (`lastVerifiedAt`), quality
       scoring refinements, a manual review queue / admin surface.
@@ -62,7 +63,7 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
    user sees (outreach copy, labels) is Hungarian; identifiers, comments,
    commits, docs, logs, tests are English. (Taxonomy names/keywords are
    Hungarian by design — they mirror Procura and feed matching.)
-2. **Branch discipline.** Develop on `claude/intelligent-allen-39ybva`. Push
+2. **Branch discipline.** Develop on `claude/intelligent-allen-2lg214`. Push
    with `git push -u origin <branch>`. Never push to `main`, never open a PR
    unless explicitly asked.
 3. **Keep parity with Procura's taxonomy.** `src/taxonomy.ts` category/region
@@ -120,6 +121,33 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 2 (Overpass countrywide coverage)
+
+- **Context:** started green (27/27 tests, clean build, offline CLI smoke OK).
+  Picked the top "next step" from run 1: widen Overpass area mappings beyond the
+  two beachhead regions.
+- **Shipped:** `connectors/overpass.ts` now derives the Overpass `AREA_QUERY`
+  from `REGIONS` (taxonomy) instead of a hand-kept two-entry map, so every one of
+  the 20 Procura regions (Budapest + 19 counties) is covered and the mapping
+  can't drift from the taxonomy. Added `osmAreaName()` to produce the right OSM
+  admin name — Budapest as the capital, counties with the post-2023 "vármegye"
+  suffix (handling Pest, whose taxonomy name already carries it). Exported
+  `buildQuery` for testing.
+- **Tests:** added `tests/overpass.test.ts` (4 cases): every region builds a
+  query, Budapest vs. county naming incl. no double-"vármegye" for Pest, limit +
+  POI-tag selection, unknown-region rejection. 31/31 green.
+- **Verified:** `npm test` 31/31, `npm run build` (tsc) clean, offline CLI smoke
+  (collect budapest + pest, stats render region/category breakdown). Offline
+  fixtures still only exist for budapest/pest — `--live` now works countrywide;
+  more offline fixtures can follow when a county connector is exercised.
+- **Also:** fixed the dev-branch name in this file (was `…-39ybva`, actual is
+  `claude/intelligent-allen-2lg214`).
+- **Next step:** add the second Tier-1 enrichment connector — NAV/VIES VAT
+  verification setting `lastVerifiedAt` (rule-based/offline-fixture first, live
+  opt-in), then the retention/purge job for suppressed/never-engaged
+  personal-data leads (gap from run 1: a lead stored before its suppression is
+  skipped on re-ingest but not yet purged).
 
 ### 2026-06-14 — run 1 (bootstrap)
 
