@@ -4,10 +4,12 @@
 import type { Connector } from "./types.js";
 import { overpassConnector } from "./overpass.js";
 import { directoryConnector } from "./directory.js";
+import { htmlDirectoryConnector } from "./htmlDirectory.js";
 
 const REGISTRY: Record<string, Connector> = {
   [overpassConnector.id]: overpassConnector,
   [directoryConnector.id]: directoryConnector,
+  [htmlDirectoryConnector.id]: htmlDirectoryConnector,
 };
 
 export function getConnector(id: string): Connector {

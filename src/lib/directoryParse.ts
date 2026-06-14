@@ -4,7 +4,7 @@
 // This maps one page into RawBusiness records; the connector handles fetching
 // and pagination.
 
-import type { RawBusiness } from "../types.js";
+import type { ParseContext, RawBusiness } from "../types.js";
 
 export type DirectoryRecord = {
   id?: string | number;
@@ -19,9 +19,7 @@ export type DirectoryRecord = {
 
 export type DirectoryPage = { results?: DirectoryRecord[] };
 
-export type DirectoryContext = { baseUrl: string; license: string };
-
-export function parseDirectoryPage(page: DirectoryPage, ctx: DirectoryContext): RawBusiness[] {
+export function parseDirectoryPage(page: DirectoryPage, ctx: ParseContext): RawBusiness[] {
   const out: RawBusiness[] = [];
   for (const r of page.results ?? []) {
     const name = (r.name ?? "").trim();
@@ -36,7 +34,7 @@ export function parseDirectoryPage(page: DirectoryPage, ctx: DirectoryContext): 
       vatNumber: r.vat ?? null,
       registrationNumber: null,
       classificationText: `${r.activity ?? ""} ${name}`.trim(),
-      source: "directory",
+      source: ctx.source,
       sourceUrl: r.id != null ? `${ctx.baseUrl}/biz/${r.id}` : ctx.baseUrl,
       sourceLicense: ctx.license,
     });

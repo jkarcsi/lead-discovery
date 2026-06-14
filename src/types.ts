@@ -15,6 +15,9 @@ export type RawBusiness = {
   sourceLicense?: string | null;
 };
 
+// Provenance a page-parser stamps onto each record it produces.
+export type ParseContext = { baseUrl: string; license: string; source: string };
+
 // Normalized + categorized lead, ready to upsert.
 export type LeadInput = {
   legalName: string;

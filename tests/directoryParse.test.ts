@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseDirectoryPage } from "../src/lib/directoryParse.js";
 
-const ctx = { baseUrl: "https://dir.test/api", license: "directory (public listing)" };
+const ctx = { baseUrl: "https://dir.test/api", license: "directory (public listing)", source: "directory" };
 
 describe("parseDirectoryPage", () => {
   it("maps records to RawBusiness with source + provenance", () => {

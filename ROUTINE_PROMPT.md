@@ -45,11 +45,11 @@ project measurably forward and leave the repo **green** (`npm test` +
       (retries + backoff + cache), `overpass` connector (all 20 regions, fixture
       + live), batched `ingest` (concurrent multi-region fetch → in-memory plan →
       bulk store), operator CLI, unit tests. **Done & green.**
-- [~] **Phase 2 — Throughput & coverage (current focus):** ~~generic paginated
-      JSON `directory` connector + parser with concurrent page fetch~~ (done);
-      ~~resumable/incremental crawl state~~ (done — `CrawlState` cursor + `--full`);
-      still to do: more real sources (registries / map platforms), a light HTML
-      parser, per-host concurrency. VIES `verify` enrichment done.
+- [~] **Phase 2 — Throughput & coverage (current focus):** ~~paginated JSON
+      `directory` connector~~ (done); ~~resumable/incremental crawl state~~ (done);
+      ~~light dependency-free HTML parser + `htmldir` connector + paginated-source
+      factory~~ (done); still to do: per-host concurrency, real source endpoints,
+      a registry/map-platform connector. VIES `verify` enrichment done.
 - [ ] **Phase 3 — Scale & data quality:** quality-scoring refinements, fuzzy
       dedupe across sources, embeddings-assisted categorization (when an API key
       is available), large-batch performance (streaming, write-batching tuning).
@@ -125,6 +125,30 @@ docs/SCOPE.md            scope note (efficiency-only; legality handled elsewhere
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 11 (Phase 2: HTML parser + paginated-source factory)
+
+- **Picked up** run 10's next step: a light HTML parser as a second parser shape.
+- **Shipped (green):**
+  - `lib/htmlDirectoryParse.ts` (pure, dependency-free): extracts `biz` cards
+    (class-tagged `name`/`cat`/`email`/`phone`/`web`/`addr`, `data-id`), decodes
+    HTML entities, prefers mailto/href over link text, skips nameless cards.
+  - `connectors/paginated.ts`: `makePaginatedConnector(spec)` factory — owns the
+    windowed concurrent pagination + live/fixture + resume cursor, so a new
+    source is just a URL builder + fixture path + page parser. **Adding sources
+    is now cheap** (the Phase 2 goal).
+  - `connectors/directory.ts` rewritten on the factory; new
+    `connectors/htmldir.ts` (`htmldir`) + budapest HTML fixtures (2 pages).
+  - `types.ts`: shared `ParseContext { baseUrl, license, source }`; parsers stamp
+    `source` from it (not hardcoded). config: `HTML_DIRECTORY_URL`.
+- **Verified:** `npm test` 93/93 green (was 90; +3 HTML-parser tests);
+  `npm run build` clean. Smoke: `Connectors: overpass, directory, htmldir`;
+  htmldir budapest parses p1(3)+p2(1)=4 (nameless card skipped); then directory
+  budapest merges the overlapping Pannon Klíma **by domain across the HTML and
+  JSON sources** → 8 total leads; independent cursors per source.
+- **Next step (Phase 2):** per-host concurrency + throttle in the fetcher (so a
+  many-domain HTML crawl parallelizes across hosts while still pacing each host),
+  or wire a real public source endpoint behind the factory.
 
 ### 2026-06-14 — run 10 (Phase 2: resumable/incremental crawl state)
 
