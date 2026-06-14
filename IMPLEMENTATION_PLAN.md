@@ -68,8 +68,8 @@ merge across sources on the dedupe key (VAT → domain → name+region).
   (registration-number bonus).
 - ✅ **M2s — Sole traders (EVNY):** flag-gated `evny` connector; records always
   flagged personal data; `EVNY_ENABLED=true` required.
-- ◻ **M3 — Scale & operate:** throughput dashboards, scheduled incremental
-  refresh, export to Procura.
+- ✅ **M3 — Scale & operate:** `refresh` (collect all sources + enrich in one
+  command), `report` (coverage/enrichment dashboard), `export` (NDJSON to Procura).
 
 **Operator utilities** (shipped, maintained but not the focus): `verify` (VIES),
 `review` (manual approve/reject queue), `suppress`/`purge` (do-not-collect +
@@ -136,6 +136,13 @@ docs/ROPA.md           generated processing record
 
 ### 2026-06-14
 
+- **M3 — scale & operate:** `refresh` (orchestrates collect across all non-gated
+  sources + all enrichment steps, resuming cursors), `report` (pure
+  `buildCoverageReport` → totals / by-source / quality buckets / enrichment
+  coverage), `export` (pure `toProcuraRecord` → NDJSON, excludes rejected +
+  personal data, quality filter). Smoke: one `refresh` built 21 deduped leads
+  across 7 sources + enriched; export wrote 19 NDJSON records. **All milestones
+  M1–M3 complete.** 132 tests green.
 - **M2s — sole traders (EVNY):** flag-gated `evny` connector (`lib/evnyParse.ts`
   + gate wrapper on the factory). Collection throws unless `EVNY_ENABLED=true`;
   records are always personal data. Added a `RawBusiness.isPersonalData` hint so
@@ -187,5 +194,6 @@ docs/ROPA.md           generated processing record
 
 ### Next
 
-M2 — Tier-2 enrichment: Google Places via the official API, polite contact-page
-crawl for email/phone, and quality-scoring refinements.
+All planned milestones (M1–M3) are complete. Future work: wire real `--live`
+endpoints behind the existing connectors/clients, scheduled `refresh` (cron),
+and embeddings-assisted categorization when an API key is available.

@@ -16,6 +16,9 @@ import { verify } from "./pipeline/verify.js";
 import { navVerify } from "./pipeline/navVerify.js";
 import { enrichContacts } from "./pipeline/enrich.js";
 import { placesEnrich } from "./pipeline/placesEnrich.js";
+import { refresh } from "./pipeline/refresh.js";
+import { exportProcura } from "./pipeline/exportProcura.js";
+import { buildCoverageReport } from "./lib/report.js";
 import { dsarExport, dsarErase } from "./pipeline/dsar.js";
 import { reviewQueue, setReview } from "./pipeline/review.js";
 import { listConnectors, connectorSources } from "./connectors/index.js";
@@ -278,6 +281,60 @@ async function cmdReview(positional: string[], flags: Flags): Promise<void> {
   throw new Error(`Unknown review action "${action}". Use queue | approve | reject.`);
 }
 
+async function cmdRefresh(flags: Flags): Promise<void> {
+  const regionIds = resolveRegions(str(flags, "region") ?? "all");
+  const live = flags.live === true;
+  console.log(`Refresh: collecting all sources for ${regionIds.length} region(s) (${live ? "LIVE" : "fixture"})…`);
+  const s = await refresh({ regionIds, live });
+  for (const r of s.sources) console.log(`  ${r.source.padEnd(14)} +${r.created} new, ${r.merged} merged`);
+  console.log(
+    `Enrichment: VIES ${s.verified}, NAV ${s.navChecked}, contacts ${s.contactsEnriched}, ` +
+      `places ${s.placesEnriched}.`,
+  );
+}
+
+async function cmdExport(flags: Flags): Promise<void> {
+  const out = str(flags, "out") ?? "procura-export.ndjson";
+  const minQuality = str(flags, "min-quality") ? Number(str(flags, "min-quality")) : 0;
+  const approvedOnly = flags.approved === true;
+  const includePersonal = flags["include-personal"] === true;
+  const s = await exportProcura({ out, minQuality, approvedOnly, includePersonal });
+  console.log(`Exported ${s.exported} lead(s) to ${s.out}.`);
+}
+
+async function cmdReport(): Promise<void> {
+  const rows = await db.lead.findMany({
+    select: {
+      source: true, categories: true, qualityScore: true, email: true, isPersonalData: true,
+      lastVerifiedAt: true, navCheckedAt: true, contactCheckedAt: true, placesCheckedAt: true,
+      reviewStatus: true,
+    },
+  });
+  const r = buildCoverageReport(
+    rows.map((l) => ({
+      source: l.source,
+      categories: JSON.parse(l.categories) as string[],
+      qualityScore: l.qualityScore,
+      hasEmail: l.email !== null,
+      isPersonalData: l.isPersonalData,
+      viesVerified: l.lastVerifiedAt !== null,
+      navChecked: l.navCheckedAt !== null,
+      contactChecked: l.contactCheckedAt !== null,
+      placesChecked: l.placesCheckedAt !== null,
+      reviewStatus: l.reviewStatus,
+    })),
+  );
+  console.log(`Leads: ${r.total} (with email: ${r.withEmail}, personal-data: ${r.personalData})`);
+  console.log(`Quality: ${r.quality.high} high (70+), ${r.quality.medium} medium, ${r.quality.low} low`);
+  console.log(`Review: ${r.review.pending} pending, ${r.review.approved} approved, ${r.review.rejected} rejected`);
+  console.log(
+    `Enrichment: VIES ${r.enrichment.viesVerified}, NAV ${r.enrichment.navChecked}, ` +
+      `contacts ${r.enrichment.contactChecked}, places ${r.enrichment.placesChecked}`,
+  );
+  console.log("By source:");
+  for (const [src, n] of r.bySource) console.log(`  ${src.padEnd(14)} ${n}`);
+}
+
 function cmdRopa(flags: Flags): void {
   const ropa = buildRopa({
     generatedAt: new Date(),
@@ -315,6 +372,9 @@ Commands:
   nav     [--live] [--limit N] [--revalidate]  tax-status check against NAV
   enrich  [--live] [--limit N] [--revalidate]  fill missing email/phone from sites
   places  [--live] [--limit N] [--revalidate]  fill phone/website/address via Places
+  refresh [--region <id|a,b|all>] [--live]     collect all sources + enrich
+  report                                       coverage / enrichment dashboard
+  export  [--out f.ndjson] [--min-quality N] [--approved] [--include-personal]
   dsar    <export|erase> <email>   data-subject access / erasure (GDPR)
   ropa    [--write]   print (or write docs/ROPA.md) the Art. 30 record
   purge   [--dry-run]   erase now-suppressed + expired personal-data leads
@@ -350,6 +410,15 @@ async function main(): Promise<void> {
       break;
     case "places":
       await cmdPlaces(flags);
+      break;
+    case "refresh":
+      await cmdRefresh(flags);
+      break;
+    case "report":
+      await cmdReport();
+      break;
+    case "export":
+      await cmdExport(flags);
       break;
     case "dsar":
       await cmdDsar(positional);
