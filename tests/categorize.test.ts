@@ -3,12 +3,12 @@ import { categorize, detectRegion } from "../src/lib/categorize.js";
 
 describe("categorize", () => {
   it("maps activity text to Procura category ids", () => {
-    expect(categorize("Irodatakarítás és higiéniai szolgáltatás")).toContain("cleaning");
+    expect(categorize("Irodatakarítás és higiéniai szolgáltatás")).toContain("takaritas");
     expect(categorize("Klíma telepítés, hűtés-fűtés")).toContain("hvac");
-    expect(categorize("őrzés-védelem, portaszolgálat")).toContain("security");
-    expect(categorize("tűzjelző rendszerek karbantartása")).toContain("fire-safety");
+    expect(categorize("őrzés-védelem, portaszolgálat")).toContain("orzes-vedelem");
+    expect(categorize("tűzjelző rendszerek karbantartása")).toContain("tuzvedelem");
     expect(categorize("rendszergazda és hálózat support")).toContain("it-support");
-    expect(categorize("munkavédelem és kockázatértékelés")).toContain("occupational-safety");
+    expect(categorize("munkavédelem és kockázatértékelés")).toContain("munkavedelem");
   });
   it("matches accent-insensitively", () => {
     expect(categorize("KLIMA SZERELES")).toContain("hvac");
@@ -19,8 +19,8 @@ describe("categorize", () => {
   });
   it("can return multiple categories", () => {
     const cats = categorize("takarítás és őrzés-védelem");
-    expect(cats).toContain("cleaning");
-    expect(cats).toContain("security");
+    expect(cats).toContain("takaritas");
+    expect(cats).toContain("orzes-vedelem");
   });
 });
 

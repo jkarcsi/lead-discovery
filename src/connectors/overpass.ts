@@ -8,18 +8,29 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { config } from "../config.js";
 import { politePost } from "../lib/fetcher.js";
+import { REGIONS } from "../taxonomy.js";
 import type { RawBusiness } from "../types.js";
 import type { CollectOptions, Connector } from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const LICENSE = "ODbL";
 
-// Region → Overpass area selector. Budapest is a city; counties are
-// admin_level 6 relations. Kept small/explicit for the beachhead regions.
-const AREA_QUERY: Record<string, string> = {
-  budapest: 'area["name"="Budapest"]["admin_level"="6"]',
-  pest: 'area["name"="Pest vármegye"]["admin_level"="6"]',
-};
+// Region → Overpass area selector, derived from the shared taxonomy so every
+// region is collectable countrywide. In OSM Hungary, Budapest and the 19
+// counties are admin_level 6 relations; counties are named "<Name> vármegye".
+function areaSelector(regionId: string, name: string): string {
+  if (regionId === "budapest") {
+    return 'area["name"="Budapest"]["admin_level"="6"]';
+  }
+  // REGIONS names carry " vármegye" only on Pest; normalize then re-append so
+  // every county resolves to its official OSM relation name.
+  const county = name.replace(/\s*vármegye$/, "");
+  return `area["name"="${county} vármegye"]["admin_level"="6"]`;
+}
+
+const AREA_QUERY: Record<string, string> = Object.fromEntries(
+  REGIONS.map((r) => [r.id, areaSelector(r.id, r.name)]),
+);
 
 type OverpassElement = {
   type: string;

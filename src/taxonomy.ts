@@ -1,6 +1,7 @@
-// Procura-aligned taxonomy: identical category and region ids so collected
-// leads slot straight into Procura's matching. Names/keywords are Hungarian
-// (the market); ids are English (code-level).
+// Procura-aligned taxonomy: category and region ids are IDENTICAL to Procura's
+// (src/lib/taxonomy.ts there) so collected leads slot straight into Procura's
+// matching. Ids and names mirror Procura (Hungarian, the market); keywords here
+// may be a superset of Procura's for better collection recall.
 
 export type CategoryDef = {
   id: string;
@@ -10,7 +11,7 @@ export type CategoryDef = {
 
 export const CATEGORIES: CategoryDef[] = [
   {
-    id: "cleaning",
+    id: "takaritas",
     name: "Takarítás",
     keywords: ["takarít", "takarit", "tisztít", "tisztit", "higién", "irodatakar", "clean", "janitor"],
   },
@@ -20,17 +21,17 @@ export const CATEGORIES: CategoryDef[] = [
     keywords: ["klíma", "klima", "hvac", "légkondi", "legkondi", "hűtés", "hutes", "futes", "fűtés", "szellőz", "szelloz", "air condition", "cooling", "heating", "ventilat"],
   },
   {
-    id: "security",
+    id: "orzes-vedelem",
     name: "Őrzés-védelem",
     keywords: ["őrzés", "orzes", "biztonsági", "biztonsag", "vagyonvéd", "vagyonved", "portaszolgálat", "portaszolgalat", "beléptet", "beleptet", "security", "guard"],
   },
   {
-    id: "occupational-safety",
+    id: "munkavedelem",
     name: "Munkavédelem",
     keywords: ["munkavéd", "munkaved", "kockázatértékel", "kockazatertekel", "üzemorvos", "uzemorvos", "munkabiztons", "occupational safety", "workplace safety", "risk assessment"],
   },
   {
-    id: "fire-safety",
+    id: "tuzvedelem",
     name: "Tűzvédelem",
     keywords: ["tűzvéd", "tuzved", "tűzoltó", "tuzolto", "tűzjelz", "tuzjelz", "menekülés", "menekules", "fire safety", "fire protection", "fire alarm", "extinguisher"],
   },

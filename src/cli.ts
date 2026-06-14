@@ -3,7 +3,7 @@
 //
 //   npm run cli -- collect --source overpass --region budapest
 //   npm run cli -- collect --source overpass --region budapest --live --limit 100
-//   npm run cli -- list --region budapest --category cleaning --min-quality 40
+//   npm run cli -- list --region budapest --category takaritas --min-quality 40
 //   npm run cli -- stats
 //   npm run cli -- suppress info@example.hu --kind EMAIL --reason "opt-out"
 

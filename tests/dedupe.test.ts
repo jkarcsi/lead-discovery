@@ -41,17 +41,17 @@ describe("dedupeKey", () => {
 
 describe("mergeLead", () => {
   it("fills gaps from the incoming record and unions categories", () => {
-    const existing: LeadInput = { ...base, email: "info@tisztairoda.hu", categories: ["cleaning"] };
+    const existing: LeadInput = { ...base, email: "info@tisztairoda.hu", categories: ["takaritas"] };
     const incoming: LeadInput = {
       ...base,
       phone: "+3612345678",
-      categories: ["security"],
+      categories: ["orzes-vedelem"],
       isPersonalData: true,
     };
     const merged = mergeLead(existing, incoming);
     expect(merged.email).toBe("info@tisztairoda.hu");
     expect(merged.phone).toBe("+3612345678");
-    expect(merged.categories.sort()).toEqual(["cleaning", "security"]);
+    expect(merged.categories.sort()).toEqual(["orzes-vedelem", "takaritas"]);
     expect(merged.isPersonalData).toBe(true); // sticky
   });
 });

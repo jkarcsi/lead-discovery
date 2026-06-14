@@ -7,7 +7,7 @@ a buyer's Procura RFQ can also reach relevant **not-yet-registered** suppliers
 every run, follow it, and keep it up to date** — especially the phase checklist
 and the **status log at the bottom**.
 
-Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-39ybva`
+Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-qkh0sa`
 Strategy doc: `docs/lead-discovery-plan.md` in the `jkarcsi/procurement-network` repo.
 
 ## Mission
@@ -41,9 +41,10 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       limit), `overpass` connector (fixture + live), `ingest` pipeline
       (transform → suppression → dedupe-merge → store + audit), `suppression`
       + `audit` compliance, operator CLI, unit tests. **Done & green.**
-- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** widen Overpass area
-      mappings to all 19 counties; add company-registry / NAV-VIES / KSH-TEÁOR /
-      MKIK connectors (ToS/licence permitting); embeddings-assisted categorization.
+- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** ~~widen Overpass area
+      mappings to all 19 counties~~ (done, run 2 — all 20 regions derived from the
+      shared taxonomy); add company-registry / NAV-VIES / KSH-TEÁOR / MKIK
+      connectors (ToS/licence permitting); embeddings-assisted categorization.
 - [ ] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
       (robots/ToS-gated), VAT/VIES verification (`lastVerifiedAt`), quality
       scoring refinements, a manual review queue / admin surface.
@@ -62,7 +63,7 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
    user sees (outreach copy, labels) is Hungarian; identifiers, comments,
    commits, docs, logs, tests are English. (Taxonomy names/keywords are
    Hungarian by design — they mirror Procura and feed matching.)
-2. **Branch discipline.** Develop on `claude/intelligent-allen-39ybva`. Push
+2. **Branch discipline.** Develop on `claude/intelligent-allen-qkh0sa`. Push
    with `git push -u origin <branch>`. Never push to `main`, never open a PR
    unless explicitly asked.
 3. **Keep parity with Procura's taxonomy.** `src/taxonomy.ts` category/region
@@ -120,6 +121,37 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 2 (taxonomy parity fix + countrywide coverage)
+
+- **Context:** read the brief, set up env, started green (27/27 tests, tsc clean,
+  offline collect smoke OK). Auditing against hard rule #3 revealed a
+  **foundational parity bug**: 4 of 6 category ids in `src/taxonomy.ts` did
+  **not** match Procura's (`src/lib/taxonomy.ts`) despite run 1 claiming they
+  were "identical". This silently breaks the project's whole premise — leads
+  would never slot into Procura's matching for those categories.
+- **Shipped:**
+  - **Taxonomy parity fix:** `cleaning→takaritas`, `security→orzes-vedelem`,
+    `occupational-safety→munkavedelem`, `fire-safety→tuzvedelem`. Now all 6
+    category ids and all 20 region ids are byte-identical to Procura's. Kept the
+    broader (superset) keyword lists for collection recall. Updated the dependent
+    tests (`categorize`, `dedupe`) and the CLI usage comment; refreshed the
+    file header to state the new invariant precisely.
+  - **Countrywide Overpass coverage:** `AREA_QUERY` in `connectors/overpass.ts`
+    is now derived from the shared `REGIONS` list, so `--live` resolves an
+    admin_level-6 OSM area for **all 20 regions** (Budapest + 19 counties as
+    "<Name> vármegye"), not just budapest/pest. (Offline fixtures still only
+    cover budapest & pest — adding more fixtures is a follow-up.)
+  - Fixed the stale dev-branch name throughout this file
+    (`…39ybva` → `…qkh0sa`, the actual branch for this session).
+- **Verified:** `npm test` 27/27 green; `npm run build` (tsc) clean; fresh-DB
+  offline smoke — collect budapest (8 fetched → 7 created, 1 merged) and `stats`
+  now renders the **Procura-aligned** category labels. 20 regions confirmed.
+- **Next step:** add the next Tier-1 connector (NAV/VIES VAT verification as an
+  enrichment step setting `lastVerifiedAt`, ToS-permitting) and/or county
+  fixtures for offline coverage; then the retention/purge job for the noted gap
+  (a lead stored *before* its suppression is skipped on re-ingest but not yet
+  purged). **Before adding categories, mirror Procura's taxonomy first.**
 
 ### 2026-06-14 — run 1 (bootstrap)
 
