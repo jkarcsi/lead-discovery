@@ -46,7 +46,7 @@ minimize wasted round-trips, and keep crawls resilient and idempotent. See
 - Operator CLI: `collect` / `verify` / `review` / `list` / `stats` / `suppress`
   / `dsar` / `ropa` / `purge`
 
-Roadmap and run history: `ROUTINE_PROMPT.md`.
+Roadmap and progress: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
 ## Quickstart
 
