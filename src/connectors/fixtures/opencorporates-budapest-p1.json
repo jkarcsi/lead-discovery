@@ -1,0 +1,22 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "id": "hu/0109222222",
+      "companyName": "Budai Tűzvédelmi Mérnökiroda Korlátolt Felelősségű Társaság",
+      "registrationNumber": "01-09-222222",
+      "seat": "1024 Budapest, Margit körút 5.",
+      "teaorCode": "8425",
+      "teaorText": "fire protection engineering",
+      "website": "https://budituz.hu"
+    },
+    {
+      "id": "hu/0109555555",
+      "companyName": "Aegis Biztonságtechnika Kft.",
+      "registrationNumber": "01-09-555555",
+      "seat": "1117 Budapest, Október huszonharmadika utca 8.",
+      "teaorCode": "8020",
+      "teaorText": "security systems"
+    }
+  ]
+}

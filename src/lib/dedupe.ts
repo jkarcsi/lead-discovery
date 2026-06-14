@@ -3,18 +3,26 @@
 //
 // Priority (most → least authoritative):
 //   1. VAT number (validated 8-digit core)
-//   2. website domain
-//   3. normalized company name + region
+//   2. registration number (cégjegyzékszám) — catches registry/aggregator
+//      records that share a company number but lack a VAT, even across name
+//      spelling variations
+//   3. website domain
+//   4. normalized company name + region
 //
 // The key is prefixed by its kind so two leads only collide when they share the
 // SAME kind of identity (a VAT match and a domain match never alias).
 
-import { digitsOnly, isValidHuVat, normalizeCompanyName } from "./normalize.js";
+import { digitsOnly, isValidHuVat, isValidRegNumber, normalizeCompanyName } from "./normalize.js";
 import type { LeadInput } from "../types.js";
 
-export function dedupeKey(lead: Pick<LeadInput, "vatNumber" | "domain" | "legalName" | "regionId">): string {
+export function dedupeKey(
+  lead: Pick<LeadInput, "vatNumber" | "registrationNumber" | "domain" | "legalName" | "regionId">,
+): string {
   if (lead.vatNumber && isValidHuVat(lead.vatNumber)) {
     return "vat:" + digitsOnly(lead.vatNumber).slice(0, 8);
+  }
+  if (lead.registrationNumber && isValidRegNumber(lead.registrationNumber)) {
+    return "reg:" + digitsOnly(lead.registrationNumber);
   }
   if (lead.domain) {
     return "domain:" + lead.domain.toLowerCase();

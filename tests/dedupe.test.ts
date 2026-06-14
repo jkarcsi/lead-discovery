@@ -24,10 +24,35 @@ describe("dedupeKey", () => {
   it("prefers a valid VAT number", () => {
     expect(dedupeKey({ ...base, vatNumber: "10773381" })).toBe("vat:10773381");
   });
-  it("falls back to domain when VAT is missing/invalid", () => {
+  it("uses the registration number when there is no VAT", () => {
+    expect(dedupeKey({ ...base, registrationNumber: "01-09-222222" })).toBe("reg:0109222222");
+  });
+  it("prefers VAT over registration number", () => {
+    expect(
+      dedupeKey({ ...base, vatNumber: "10773381", registrationNumber: "01-09-222222" }),
+    ).toBe("vat:10773381");
+  });
+  it("prefers registration number over domain", () => {
+    expect(
+      dedupeKey({ ...base, registrationNumber: "01-09-222222", domain: "x.hu" }),
+    ).toBe("reg:0109222222");
+  });
+  it("matches the same company number across name spelling variations", () => {
+    const a = dedupeKey({ ...base, legalName: "Budai Tűzvédelmi Kft.", registrationNumber: "01-09-222222" });
+    const b = dedupeKey({
+      ...base,
+      legalName: "Budai Tűzvédelmi Mérnökiroda Korlátolt Felelősségű Társaság",
+      registrationNumber: "01-09-222222",
+    });
+    expect(a).toBe(b);
+  });
+  it("falls back to domain when VAT is missing/invalid and no reg number", () => {
     expect(dedupeKey({ ...base, vatNumber: "12345678", domain: "tisztairoda.hu" })).toBe(
       "domain:tisztairoda.hu",
     );
+  });
+  it("ignores a malformed registration number", () => {
+    expect(dedupeKey({ ...base, registrationNumber: "123", domain: "x.hu" })).toBe("domain:x.hu");
   });
   it("falls back to normalized name + region", () => {
     expect(dedupeKey(base)).toBe("name:tiszta iroda|budapest");

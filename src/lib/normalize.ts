@@ -60,6 +60,12 @@ export function digitsOnly(raw: string | null | undefined): string {
   return (raw ?? "").replace(/\D/g, "");
 }
 
+// Hungarian cégjegyzékszám (company registration number): court(2) + form(2) +
+// serial(6) = 10 digits, however it's punctuated ("01-09-111111").
+export function isValidRegNumber(raw: string | null | undefined): boolean {
+  return digitsOnly(raw).length === 10;
+}
+
 // Hungarian VAT number is 8 digits (+ optional 3-digit suffix). Validate the
 // 8-digit core's check digit (weights 9,7,3,1,9,7,3).
 export function isValidHuVat(raw: string | null | undefined): boolean {
