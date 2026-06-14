@@ -9,8 +9,10 @@
 
 import { db } from "./db.js";
 import { ingest } from "./pipeline/ingest.js";
+import { purge } from "./pipeline/purge.js";
 import { listConnectors } from "./connectors/index.js";
 import { addSuppression, type SuppressionKind } from "./lib/suppression.js";
+import { DEFAULT_RETENTION } from "./lib/retention.js";
 import { CATEGORIES, REGIONS } from "./taxonomy.js";
 
 type Flags = Record<string, string | boolean>;
@@ -123,6 +125,27 @@ async function cmdSuppress(positional: string[], flags: Flags): Promise<void> {
   console.log(`Suppressed ${kind} "${value}" (${reason}).`);
 }
 
+async function cmdPurge(flags: Flags): Promise<void> {
+  const months = str(flags, "max-age-months")
+    ? Number(str(flags, "max-age-months"))
+    : DEFAULT_RETENTION.personalDataMaxAgeMonths;
+  const dryRun = flags["dry-run"] === true;
+
+  console.log(
+    `Purge (${dryRun ? "DRY RUN" : "LIVE"}): suppressed leads + never-engaged ` +
+      `personal-data leads older than ${months} months…`,
+  );
+  const stats = await purge({
+    policy: { personalDataMaxAgeMonths: months },
+    dryRun,
+  });
+  console.log(
+    `Scanned ${stats.scanned}: ${stats.suppressed} suppressed, ` +
+      `${stats.retentionExpired} retention-expired` +
+      (dryRun ? " (nothing deleted)." : ` → ${stats.purged} purged.`),
+  );
+}
+
 function help(): void {
   console.log(`lead-discovery CLI
 
@@ -131,6 +154,7 @@ Commands:
   list    [--region <id>] [--category <id>] [--min-quality N] [--limit N]
   stats
   suppress <email|domain> [--kind EMAIL|DOMAIN] [--reason <text>]
+  purge    [--max-age-months N] [--dry-run]
 
 Connectors: ${listConnectors().join(", ")}
 Regions:    ${REGIONS.map((r) => r.id).join(", ")}
@@ -151,6 +175,9 @@ async function main(): Promise<void> {
       break;
     case "suppress":
       await cmdSuppress(positional, flags);
+      break;
+    case "purge":
+      await cmdPurge(flags);
       break;
     default:
       help();

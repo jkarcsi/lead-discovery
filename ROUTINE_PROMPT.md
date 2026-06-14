@@ -7,7 +7,7 @@ a buyer's Procura RFQ can also reach relevant **not-yet-registered** suppliers
 every run, follow it, and keep it up to date** — especially the phase checklist
 and the **status log at the bottom**.
 
-Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-39ybva`
+Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-qvbuq9`
 Strategy doc: `docs/lead-discovery-plan.md` in the `jkarcsi/procurement-network` repo.
 
 ## Mission
@@ -41,14 +41,17 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       limit), `overpass` connector (fixture + live), `ingest` pipeline
       (transform → suppression → dedupe-merge → store + audit), `suppression`
       + `audit` compliance, operator CLI, unit tests. **Done & green.**
-- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** widen Overpass area
-      mappings to all 19 counties; add company-registry / NAV-VIES / KSH-TEÁOR /
-      MKIK connectors (ToS/licence permitting); embeddings-assisted categorization.
+- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** ~~widen Overpass area
+      mappings to all 19 counties~~ (done — `areaSelector` covers all 20 regions
+      from the taxonomy); add company-registry / NAV-VIES / KSH-TEÁOR / MKIK
+      connectors (ToS/licence permitting); embeddings-assisted categorization.
 - [ ] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
       (robots/ToS-gated), VAT/VIES verification (`lastVerifiedAt`), quality
       scoring refinements, a manual review queue / admin surface.
-- [ ] **Retention & DSAR ops:** purge job for never-engaged personal-data leads;
-      DSAR (access/erasure/objection) tooling; Art. 30 record artifact.
+- [ ] **Retention & DSAR ops:** ~~purge job for never-engaged personal-data
+      leads~~ (done — `pipeline/purge.ts` + `lib/retention.ts`, also erases rows
+      stored before a later suppression); DSAR (access/erasure/objection)
+      tooling; Art. 30 record artifact.
 - [ ] **Phase 3 — Cold-invite loop (GATED on counsel):** export to Procura,
       `RfqInvite source=COLD` + `leadId`, tokenized opt-out endpoint, claim &
       convert lead → SupplierProfile, hard caps, complaint/bounce auto-pause,
@@ -62,7 +65,7 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
    user sees (outreach copy, labels) is Hungarian; identifiers, comments,
    commits, docs, logs, tests are English. (Taxonomy names/keywords are
    Hungarian by design — they mirror Procura and feed matching.)
-2. **Branch discipline.** Develop on `claude/intelligent-allen-39ybva`. Push
+2. **Branch discipline.** Develop on `claude/intelligent-allen-qvbuq9`. Push
    with `git push -u origin <branch>`. Never push to `main`, never open a PR
    unless explicitly asked.
 3. **Keep parity with Procura's taxonomy.** `src/taxonomy.ts` category/region
@@ -108,11 +111,11 @@ git log --oneline -10        # see where the last run stopped
 ```
 prisma/schema.prisma     Lead / Suppression / AuditEvent
 src/taxonomy.ts          Procura-aligned categories + regions (shared ids)
-src/lib/                 pure, tested: normalize, categorize, dedupe, quality
-                         + side-effecting: fetcher (polite), suppression, audit
+src/lib/                 pure, tested: normalize, categorize, dedupe, quality,
+                         retention; + side-effecting: fetcher, suppression, audit
 src/connectors/          source connectors (overpass) + offline fixtures
-src/pipeline/            transform (pure) + ingest (orchestration)
-src/cli.ts               operator CLI (collect / list / stats / suppress)
+src/pipeline/            transform (pure) + ingest + purge (orchestration)
+src/cli.ts               operator CLI (collect / list / stats / suppress / purge)
 tests/                   vitest unit tests for the pure libs
 docs/LEGAL.md            the compliance gate
 ```
@@ -120,6 +123,41 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 2 (countrywide coverage + retention/erasure)
+
+- **Context:** picked up Phase-1-cont. from run 1's "next step". Started green
+  (27 tests, clean tsc). Fixed a branch-name mismatch in this file: the actual
+  dev branch is `claude/intelligent-allen-qvbuq9` (was wrongly `…-39ybva`).
+- **Shipped:**
+  - **Countrywide Overpass coverage** (`connectors/overpass.ts`): replaced the
+    2-region `AREA_QUERY` map with `areaSelector(regionId)`, derived from the
+    shared taxonomy — Budapest uses the city boundary, every county maps to its
+    `"<name> vármegye"` admin_level-6 relation. `--live` now works for all 20
+    Procura regions; offline fixtures still only ship for budapest/pest.
+  - **Retention / erasure job** — the gap noted in run 1. Pure policy in
+    `lib/retention.ts` (`isExpiredPersonalLead`, `isLeadSuppressed`,
+    `purgeReason`); orchestration in `pipeline/purge.ts`; `purge`
+    CLI command (`--max-age-months N`, `--dry-run`). It erases (a) never-engaged
+    (lifecycle NEW) personal-data leads past the retention horizon (default 12
+    months) and (b) any lead whose contact now matches the suppression list —
+    closing the "stored before opt-out" hole (ingest only blocks future
+    re-collection). Each deletion writes a **surviving** `PURGED` audit row with
+    `leadId=null` and non-identifying meta (reason/region/source/flag), so the
+    Art. 5(2) accountability trail outlives the cascade without re-storing the
+    erased contact data. Added `PURGED` to `AuditType`.
+  - Tests: +17 (`retention.test.ts` 12, `overpass.test.ts` 5) → **44 total**.
+- **Verified:** `npm test` 44/44 green; `tsc` clean. Offline CLI smoke: collect
+  budapest (7 created), suppress `tisztairoda.hu`, `purge --dry-run` flags 1
+  suppressed (deletes nothing), `purge` erases it (→6), `purge --max-age-months 0`
+  erases the 1 never-engaged personal-data lead (→5, personal-data count 0).
+  Confirmed 2 `PURGED` audit rows persist with `leadId=null` + safe meta.
+- **Next step:** **VAT/VIES verification** (Phase 2 headline) — a `verify` CLI
+  command + `lib/verifier.ts` (pure interpretation of a VIES response, tested via
+  fixture) + a polite live call to the EU VIES REST endpoint, setting
+  `lastVerifiedAt` and writing a `VERIFIED` audit; bump quality for VIES-valid
+  VAT. Keep it offline-first (fixture) like the overpass connector. After that:
+  DSAR (access/erasure/objection) tooling + an Art. 30 processing-record doc.
 
 ### 2026-06-14 — run 1 (bootstrap)
 

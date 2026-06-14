@@ -23,10 +23,13 @@ Procura repo (`docs/lead-discovery-plan.md`).
 - Pure libraries: `normalize`, `categorize` (+ region detection), `dedupe`
   (VAT→domain→name key + merge), `quality` (0–100 score)
 - Polite `fetcher` (identified UA, per-domain rate limit, robots.txt honored)
-- Connectors: OSM Overpass (Tier-1, ODbL) with offline fixtures + live mode
+- Connectors: OSM Overpass (Tier-1, ODbL) with offline fixtures + live mode;
+  area selectors cover all 20 Procura regions (Budapest + 19 counties)
 - Pipeline `ingest` (transform → suppression → dedupe-merge → store + audit)
-- Compliance: `suppression` (global do-not-contact, checked at ingest) + `audit`
-- Operator CLI: `collect` / `list` / `stats` / `suppress` (no outreach — gated)
+- Compliance: `suppression` (global do-not-contact, checked at ingest) + `audit`;
+  `retention`/`purge` (erase never-engaged personal-data leads past the retention
+  horizon, and any lead matching a later suppression — with a surviving audit row)
+- Operator CLI: `collect` / `list` / `stats` / `suppress` / `purge` (no outreach — gated)
 - Unit tests (vitest) for the pure libraries
 
 Roadmap and run history: `ROUTINE_PROMPT.md`. **No outreach** is built or
