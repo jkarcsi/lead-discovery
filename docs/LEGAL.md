@@ -77,8 +77,9 @@ compliance-first; the gate ensures we never act on it before it is reviewed.
 - **LIA + DPIA** completed and signed off.
 - **Opt-out endpoint** (tokenized, no login) → instant global suppression.
 - **DSAR** workflow (access / erasure / objection) with an SLA + audit.
-- **Retention job**: purge personal-data leads never engaged after N months;
-  re-verify business data periodically.
+- **Retention job** (implemented, `npm run cli -- purge`): erases never-engaged
+  personal-data leads past `PERSONAL_DATA_RETENTION_DAYS`, and any lead now on
+  the suppression list. Re-verify business data periodically — still planned.
 - **Provenance** + **Art. 30** record kept current.
 - **Complaint & bounce monitoring** with automatic campaign pause thresholds.
 
@@ -90,7 +91,9 @@ compliance-first; the gate ensures we never act on it before it is reviewed.
   every record at ingest.
 - `Suppression` is checked at **ingest** (and will be at send): a suppressed
   email/domain is never (re)stored with contactable data
-  (`SUPPRESSED_SKIP` audit event).
+  (`SUPPRESSED_SKIP` audit event). The `purge` job closes the gap for leads
+  collected *before* their suppression — it erases them and leaves a detached
+  `PURGED` audit row carrying no personal data.
 - `AuditEvent` records every collect / merge / suppression / (future) contact /
   opt-out / DSAR for accountability.
 

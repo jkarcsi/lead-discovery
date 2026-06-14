@@ -26,7 +26,12 @@ Procura repo (`docs/lead-discovery-plan.md`).
 - Connectors: OSM Overpass (Tier-1, ODbL) with offline fixtures + live mode
 - Pipeline `ingest` (transform → suppression → dedupe-merge → store + audit)
 - Compliance: `suppression` (global do-not-contact, checked at ingest) + `audit`
-- Operator CLI: `collect` / `list` / `stats` / `suppress` (no outreach — gated)
+  + `retention` (erase now-suppressed and expired never-engaged personal-data
+  leads, with a detached audit trail)
+- Operator CLI: `collect` / `list` / `stats` / `suppress` / `purge` (no outreach
+  — gated)
+- Connector coverage: all 19 counties + Budapest (Overpass area mappings derived
+  from the shared taxonomy)
 - Unit tests (vitest) for the pure libraries
 
 Roadmap and run history: `ROUTINE_PROMPT.md`. **No outreach** is built or
@@ -42,6 +47,7 @@ npm test                       # pure-library unit tests
 npm run cli -- collect --source overpass --region budapest   # dry-run (fixture)
 npm run cli -- collect --source overpass --region budapest --live   # real Overpass fetch
 npm run cli -- stats
+npm run cli -- purge --dry-run                                # preview retention erasures
 ```
 
 Without `--live`, the Overpass connector reads `src/connectors/fixtures/`, so

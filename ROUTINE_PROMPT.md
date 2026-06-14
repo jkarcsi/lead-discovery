@@ -7,7 +7,7 @@ a buyer's Procura RFQ can also reach relevant **not-yet-registered** suppliers
 every run, follow it, and keep it up to date** — especially the phase checklist
 and the **status log at the bottom**.
 
-Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-39ybva`
+Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-xv65ne`
 Strategy doc: `docs/lead-discovery-plan.md` in the `jkarcsi/procurement-network` repo.
 
 ## Mission
@@ -41,9 +41,10 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       limit), `overpass` connector (fixture + live), `ingest` pipeline
       (transform → suppression → dedupe-merge → store + audit), `suppression`
       + `audit` compliance, operator CLI, unit tests. **Done & green.**
-- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** widen Overpass area
-      mappings to all 19 counties; add company-registry / NAV-VIES / KSH-TEÁOR /
-      MKIK connectors (ToS/licence permitting); embeddings-assisted categorization.
+- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** ~~widen Overpass area
+      mappings to all 19 counties~~ (done — derived from taxonomy); add
+      company-registry / NAV-VIES / KSH-TEÁOR / MKIK connectors (ToS/licence
+      permitting); embeddings-assisted categorization.
 - [ ] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
       (robots/ToS-gated), VAT/VIES verification (`lastVerifiedAt`), quality
       scoring refinements, a manual review queue / admin surface.
@@ -62,7 +63,7 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
    user sees (outreach copy, labels) is Hungarian; identifiers, comments,
    commits, docs, logs, tests are English. (Taxonomy names/keywords are
    Hungarian by design — they mirror Procura and feed matching.)
-2. **Branch discipline.** Develop on `claude/intelligent-allen-39ybva`. Push
+2. **Branch discipline.** Develop on `claude/intelligent-allen-xv65ne`. Push
    with `git push -u origin <branch>`. Never push to `main`, never open a PR
    unless explicitly asked.
 3. **Keep parity with Procura's taxonomy.** `src/taxonomy.ts` category/region
@@ -120,6 +121,40 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 2 (retention/erasure + countrywide coverage)
+
+- **Picked up** the next step from run 1: countrywide Overpass coverage + the
+  retention/purge gap (a lead stored *before* its suppression was skipped on
+  re-ingest but never erased).
+- **Shipped (Phase 1 cont., green):**
+  - `lib/retention.ts` (pure): `purgeDecision` — purge if the lead's email /
+    email-domain / website-domain is now suppressed (SUPPRESSED), or it's a
+    never-engaged (`lifecycle=NEW`) personal-data lead past
+    `PERSONAL_DATA_RETENTION_DAYS` (PERSONAL_DATA_EXPIRED). Suppression wins
+    over type/age. 11 unit tests.
+  - `pipeline/purge.ts`: loads the suppression set, scans all leads, and for
+    each erasure writes a **detached** `PURGED` audit row (leadId=null so it
+    survives the cascade delete; meta carries only the pseudonymous lead id,
+    reason, source, region — no personal data) then deletes the lead.
+  - `cli.ts`: `purge [--dry-run]`. `audit.ts`: `PURGED` type. `config.ts` +
+    `.env.example`: `PERSONAL_DATA_RETENTION_DAYS` (default 365).
+  - `connectors/overpass.ts`: `AREA_QUERY` now derived from `taxonomy.REGIONS`
+    → all 19 counties + Budapest map to their OSM admin_level-6 area names
+    (handles the "vármegye" suffix + the Budapest/Pest special cases), so
+    `--live` works countrywide and stays in lockstep with Procura's regions.
+  - Docs: README status/quickstart + LEGAL.md (retention job marked implemented,
+    gap note).
+- **Verified:** `npm test` 38/38 green (was 27); `npm run build` clean. Offline
+  smoke: collect budapest (7 created), suppress 2 of them (one EMAIL, one DOMAIN
+  matched via email-domain), `purge --dry-run` reports 2 (deletes nothing),
+  `purge` erases 2 (stats 7→5), re-collect skips those 2 (suppressed); confirmed
+  2 detached `PURGED` audit rows with no email in meta. County area-name
+  derivation printed and checked for all 20 regions.
+- **Next step:** add NAV/VIES VAT verification as an enrichment connector
+  (set `lastVerifiedAt`, `VERIFIED` audit), then a DSAR (access/erasure/
+  objection) CLI surface reusing the purge erasure path, and an Art. 30
+  record-of-processing artifact.
 
 ### 2026-06-14 — run 1 (bootstrap)
 

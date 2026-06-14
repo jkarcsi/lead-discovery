@@ -9,6 +9,7 @@
 
 import { db } from "./db.js";
 import { ingest } from "./pipeline/ingest.js";
+import { purge } from "./pipeline/purge.js";
 import { listConnectors } from "./connectors/index.js";
 import { addSuppression, type SuppressionKind } from "./lib/suppression.js";
 import { CATEGORIES, REGIONS } from "./taxonomy.js";
@@ -123,6 +124,16 @@ async function cmdSuppress(positional: string[], flags: Flags): Promise<void> {
   console.log(`Suppressed ${kind} "${value}" (${reason}).`);
 }
 
+async function cmdPurge(flags: Flags): Promise<void> {
+  const dryRun = flags["dry-run"] === true;
+  const stats = await purge({ dryRun });
+  console.log(
+    `${dryRun ? "[dry-run] " : ""}Purge: scanned ${stats.scanned}, ` +
+      `now-suppressed ${stats.suppressed}, personal-data expired ${stats.personalDataExpired}` +
+      `${dryRun ? " (nothing deleted)" : " deleted"}.`,
+  );
+}
+
 function help(): void {
   console.log(`lead-discovery CLI
 
@@ -131,6 +142,7 @@ Commands:
   list    [--region <id>] [--category <id>] [--min-quality N] [--limit N]
   stats
   suppress <email|domain> [--kind EMAIL|DOMAIN] [--reason <text>]
+  purge   [--dry-run]   erase now-suppressed + expired personal-data leads
 
 Connectors: ${listConnectors().join(", ")}
 Regions:    ${REGIONS.map((r) => r.id).join(", ")}
@@ -151,6 +163,9 @@ async function main(): Promise<void> {
       break;
     case "suppress":
       await cmdSuppress(positional, flags);
+      break;
+    case "purge":
+      await cmdPurge(flags);
       break;
     default:
       help();

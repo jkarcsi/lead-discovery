@@ -11,7 +11,8 @@ export type AuditType =
   | "DSAR"
   | "VERIFIED"
   | "REGISTERED"
-  | "SUPPRESSED_SKIP";
+  | "SUPPRESSED_SKIP"
+  | "PURGED";
 
 export async function recordAudit(
   leadId: string | null,
