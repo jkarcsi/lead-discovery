@@ -7,7 +7,7 @@ a buyer's Procura RFQ can also reach relevant **not-yet-registered** suppliers
 every run, follow it, and keep it up to date** — especially the phase checklist
 and the **status log at the bottom**.
 
-Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-39ybva`
+Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-fqxx72`
 Strategy doc: `docs/lead-discovery-plan.md` in the `jkarcsi/procurement-network` repo.
 
 ## Mission
@@ -62,7 +62,7 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
    user sees (outreach copy, labels) is Hungarian; identifiers, comments,
    commits, docs, logs, tests are English. (Taxonomy names/keywords are
    Hungarian by design — they mirror Procura and feed matching.)
-2. **Branch discipline.** Develop on `claude/intelligent-allen-39ybva`. Push
+2. **Branch discipline.** Develop on `claude/intelligent-allen-fqxx72`. Push
    with `git push -u origin <branch>`. Never push to `main`, never open a PR
    unless explicitly asked.
 3. **Keep parity with Procura's taxonomy.** `src/taxonomy.ts` category/region
@@ -120,6 +120,30 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 2 (Overpass countrywide coverage)
+
+- **Context:** repo started green (33→ was 27 tests, clean `tsc`, offline CLI
+  smoke OK). Fixed a stale branch reference in this file: the dev branch is
+  `claude/intelligent-allen-fqxx72` (was `…39ybva`).
+- **Shipped (Phase 1 cont. — coverage):** Overpass `--live` now works for every
+  region, not just budapest/pest. Replaced the hardcoded 2-entry `AREA_QUERY`
+  map with `areaSelector(regionId)`, derived from the shared taxonomy `REGIONS`
+  (single source of truth): Budapest → `area["name"="Budapest"]["admin_level"="6"]`,
+  counties → `area["name"="<County> vármegye"]["admin_level"="6"]` (suffix added
+  only when the taxonomy name lacks it, so "Pest vármegye" isn't doubled).
+  Exported `areaSelector` + `buildQuery` for testing.
+- **Verified:** `npm test` 33/33 green (+6 new in `tests/overpass.test.ts`,
+  covering Budapest, suffix-append, no-double-suffix, all-20-regions sweep,
+  unknown-region error, and `buildQuery` shape/limit); `npm run build` clean;
+  offline CLI smoke (collect pest → 2 created; `stats` renders region breakdown).
+- **Next step:** add a second Tier-1 enrichment connector — NAV/VIES VAT
+  verification setting `lastVerifiedAt` on leads with a `vatNumber` (schema
+  already has the field? verify, add if missing) — and then the retention/purge
+  job for suppressed/never-engaged personal-data leads (the gap from run 1:
+  a lead stored before its suppression is skipped on re-ingest but not purged).
+  Live countrywide collection still needs fixtures only for offline tests; the
+  `--live` path is now unblocked for all counties.
 
 ### 2026-06-14 — run 1 (bootstrap)
 

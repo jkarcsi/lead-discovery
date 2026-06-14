@@ -8,18 +8,27 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { config } from "../config.js";
 import { politePost } from "../lib/fetcher.js";
+import { REGIONS } from "../taxonomy.js";
 import type { RawBusiness } from "../types.js";
 import type { CollectOptions, Connector } from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const LICENSE = "ODbL";
 
-// Region → Overpass area selector. Budapest is a city; counties are
-// admin_level 6 relations. Kept small/explicit for the beachhead regions.
-const AREA_QUERY: Record<string, string> = {
-  budapest: 'area["name"="Budapest"]["admin_level"="6"]',
-  pest: 'area["name"="Pest vármegye"]["admin_level"="6"]',
-};
+// Region → Overpass area selector, derived from the shared taxonomy so live
+// collection covers every region without a second source of truth. In OSM the
+// Hungarian counties are admin_level 6 relations named "<County> vármegye";
+// Budapest is the one non-county (also admin_level 6). We match on name so the
+// query stays independent of OSM's volatile relation ids.
+export function areaSelector(regionId: string): string {
+  const region = REGIONS.find((r) => r.id === regionId);
+  if (!region) throw new Error(`No Overpass area mapping for region "${regionId}"`);
+  const name =
+    region.id === "budapest" || region.name.endsWith("vármegye")
+      ? region.name
+      : `${region.name} vármegye`;
+  return `area["name"="${name}"]["admin_level"="6"]`;
+}
 
 type OverpassElement = {
   type: string;
@@ -28,9 +37,8 @@ type OverpassElement = {
 };
 type OverpassResponse = { elements?: OverpassElement[] };
 
-function buildQuery(regionId: string, limit: number): string {
-  const area = AREA_QUERY[regionId];
-  if (!area) throw new Error(`No Overpass area mapping for region "${regionId}"`);
+export function buildQuery(regionId: string, limit: number): string {
+  const area = areaSelector(regionId);
   return `[out:json][timeout:60];
 ${area}->.a;
 (
