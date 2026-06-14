@@ -7,7 +7,7 @@ a buyer's Procura RFQ can also reach relevant **not-yet-registered** suppliers
 every run, follow it, and keep it up to date** — especially the phase checklist
 and the **status log at the bottom**.
 
-Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-39ybva`
+Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/sleepy-fermat-evk9fm`
 Strategy doc: `docs/lead-discovery-plan.md` in the `jkarcsi/procurement-network` repo.
 
 ## Mission
@@ -41,9 +41,10 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       limit), `overpass` connector (fixture + live), `ingest` pipeline
       (transform → suppression → dedupe-merge → store + audit), `suppression`
       + `audit` compliance, operator CLI, unit tests. **Done & green.**
-- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** widen Overpass area
-      mappings to all 19 counties; add company-registry / NAV-VIES / KSH-TEÁOR /
-      MKIK connectors (ToS/licence permitting); embeddings-assisted categorization.
+- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** ~~widen Overpass area
+      mappings to all 19 counties~~ (done, run 2 — derived from taxonomy); add
+      company-registry / NAV-VIES / KSH-TEÁOR / MKIK connectors (ToS/licence
+      permitting); embeddings-assisted categorization.
 - [ ] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
       (robots/ToS-gated), VAT/VIES verification (`lastVerifiedAt`), quality
       scoring refinements, a manual review queue / admin surface.
@@ -62,7 +63,7 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
    user sees (outreach copy, labels) is Hungarian; identifiers, comments,
    commits, docs, logs, tests are English. (Taxonomy names/keywords are
    Hungarian by design — they mirror Procura and feed matching.)
-2. **Branch discipline.** Develop on `claude/intelligent-allen-39ybva`. Push
+2. **Branch discipline.** Develop on `claude/sleepy-fermat-evk9fm`. Push
    with `git push -u origin <branch>`. Never push to `main`, never open a PR
    unless explicitly asked.
 3. **Keep parity with Procura's taxonomy.** `src/taxonomy.ts` category/region
@@ -120,6 +121,34 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 2 (countrywide Overpass coverage)
+
+- **Context:** dev branch for this routine is `claude/sleepy-fermat-evk9fm`
+  (updated the brief's branch references — the old `intelligent-allen` name was
+  stale). Picked the top unchecked Phase-1-cont item: widen Overpass coverage
+  beyond the two beachhead regions.
+- **Shipped:**
+  - `connectors/overpass.ts`: replaced the hand-maintained 2-entry `AREA_QUERY`
+    map with `areaSelector(regionId)`, derived from the shared `taxonomy.ts`
+    `REGIONS`. All 20 region ids (Budapest + 19 counties) now resolve to an OSM
+    `admin_level=6` area, so `--live` works countrywide. Budapest stays the bare
+    city name; counties get the `vármegye` suffix (handling Pest, whose taxonomy
+    name already carries it — no double suffix). Adding a region to the taxonomy
+    now enables it here automatically (Procura parity by construction).
+  - `tests/overpass.test.ts`: parity guard (every taxonomy region resolves),
+    Budapest / bare-county / already-suffixed (Pest) selector shapes, unknown-region
+    throw, plus first `parseOverpass` unit tests (tag→lead mapping, HU-VAT strip,
+    anonymous-POI skip).
+- **Verified:** `npm test` 34/34 green (was 27; +7); `npm run build` (tsc) clean;
+  offline CLI smoke — collect budapest (8 fetched → 7 created, 1 merged), stats
+  renders region/category breakdown. Live coverage is now code-complete for all
+  counties; only budapest/pest have offline fixtures (by design — `--live` covers
+  the rest).
+- **Next step:** add a second Tier-1 enrichment connector — NAV/VIES VAT
+  verification setting `lastVerifiedAt` (ToS/licence permitting) — then the
+  retention/purge job for suppressed/never-engaged personal-data leads (the lead
+  stored *before* its suppression is skipped on re-ingest but not yet purged).
 
 ### 2026-06-14 — run 1 (bootstrap)
 

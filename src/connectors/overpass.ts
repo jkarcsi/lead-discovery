@@ -8,18 +8,31 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { config } from "../config.js";
 import { politePost } from "../lib/fetcher.js";
+import { REGIONS } from "../taxonomy.js";
 import type { RawBusiness } from "../types.js";
 import type { CollectOptions, Connector } from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const LICENSE = "ODbL";
 
-// Region → Overpass area selector. Budapest is a city; counties are
-// admin_level 6 relations. Kept small/explicit for the beachhead regions.
-const AREA_QUERY: Record<string, string> = {
-  budapest: 'area["name"="Budapest"]["admin_level"="6"]',
-  pest: 'area["name"="Pest vármegye"]["admin_level"="6"]',
-};
+// Region → Overpass area selector. In OSM Hungary both Budapest and the 19
+// counties sit at admin_level 6; the counties are relations named
+// "<County> vármegye" (Hungary renamed "megye" → "vármegye" in 2022).
+// Derived from the shared Procura taxonomy so live coverage stays in lockstep
+// with Procura's region ids — adding a region there enables it here for free.
+export function areaSelector(regionId: string): string {
+  const region = REGIONS.find((r) => r.id === regionId);
+  if (!region) throw new Error(`No Overpass area mapping for region "${regionId}"`);
+  // Budapest is a city (not a "vármegye"); Pest's taxonomy name already carries
+  // the suffix, the rest are bare county names that need it appended.
+  const osmName =
+    regionId === "budapest"
+      ? "Budapest"
+      : region.name.endsWith("vármegye")
+        ? region.name
+        : `${region.name} vármegye`;
+  return `area["name"="${osmName}"]["admin_level"="6"]`;
+}
 
 type OverpassElement = {
   type: string;
@@ -29,8 +42,7 @@ type OverpassElement = {
 type OverpassResponse = { elements?: OverpassElement[] };
 
 function buildQuery(regionId: string, limit: number): string {
-  const area = AREA_QUERY[regionId];
-  if (!area) throw new Error(`No Overpass area mapping for region "${regionId}"`);
+  const area = areaSelector(regionId);
   return `[out:json][timeout:60];
 ${area}->.a;
 (
