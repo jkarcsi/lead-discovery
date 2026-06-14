@@ -23,10 +23,13 @@ Procura repo (`docs/lead-discovery-plan.md`).
 - Pure libraries: `normalize`, `categorize` (+ region detection), `dedupe`
   (VAT→domain→name key + merge), `quality` (0–100 score)
 - Polite `fetcher` (identified UA, per-domain rate limit, robots.txt honored)
-- Connectors: OSM Overpass (Tier-1, ODbL) with offline fixtures + live mode
+- Connectors: OSM Overpass (Tier-1, ODbL) with offline fixtures + live mode,
+  countrywide area coverage (Budapest + all 19 counties)
 - Pipeline `ingest` (transform → suppression → dedupe-merge → store + audit)
+- VAT verification (`verify`): local HU check-digit offline, EU **VIES** with
+  `--live`; stamps `lastVerifiedAt` / `vatValid` and re-scores quality
 - Compliance: `suppression` (global do-not-contact, checked at ingest) + `audit`
-- Operator CLI: `collect` / `list` / `stats` / `suppress` (no outreach — gated)
+- Operator CLI: `collect` / `verify` / `list` / `stats` / `suppress` (no outreach — gated)
 - Unit tests (vitest) for the pure libraries
 
 Roadmap and run history: `ROUTINE_PROMPT.md`. **No outreach** is built or
@@ -41,6 +44,7 @@ npx prisma db push
 npm test                       # pure-library unit tests
 npm run cli -- collect --source overpass --region budapest   # dry-run (fixture)
 npm run cli -- collect --source overpass --region budapest --live   # real Overpass fetch
+npm run cli -- verify                # validate VAT numbers (checksum; --live = VIES)
 npm run cli -- stats
 ```
 

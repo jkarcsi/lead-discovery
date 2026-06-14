@@ -7,7 +7,9 @@ a buyer's Procura RFQ can also reach relevant **not-yet-registered** suppliers
 every run, follow it, and keep it up to date** — especially the phase checklist
 and the **status log at the bottom**.
 
-Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-39ybva`
+Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: the session's designated
+`claude/intelligent-allen-*` branch (currently `claude/intelligent-allen-8jgyss`;
+the suffix changes per session — push to whichever branch this run was given).
 Strategy doc: `docs/lead-discovery-plan.md` in the `jkarcsi/procurement-network` repo.
 
 ## Mission
@@ -41,12 +43,15 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       limit), `overpass` connector (fixture + live), `ingest` pipeline
       (transform → suppression → dedupe-merge → store + audit), `suppression`
       + `audit` compliance, operator CLI, unit tests. **Done & green.**
-- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** widen Overpass area
-      mappings to all 19 counties; add company-registry / NAV-VIES / KSH-TEÁOR /
-      MKIK connectors (ToS/licence permitting); embeddings-assisted categorization.
-- [ ] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
-      (robots/ToS-gated), VAT/VIES verification (`lastVerifiedAt`), quality
-      scoring refinements, a manual review queue / admin surface.
+- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** ✅ Overpass area
+      mappings now cover Budapest + all 19 counties (derived from taxonomy);
+      ✅ VIES VAT verification connector. Remaining: company-registry / NAV
+      taxpayer / KSH-TEÁOR / MKIK connectors (ToS/licence permitting);
+      embeddings-assisted categorization.
+- [ ] **Phase 2 — Enrichment & verification:** ✅ VAT/VIES verification
+      (`verify` pipeline + CLI, stamps `lastVerifiedAt`/`vatValid`, re-scores
+      quality). Remaining: Tier-2 public contact pages (robots/ToS-gated),
+      quality scoring refinements, a manual review queue / admin surface.
 - [ ] **Retention & DSAR ops:** purge job for never-engaged personal-data leads;
       DSAR (access/erasure/objection) tooling; Art. 30 record artifact.
 - [ ] **Phase 3 — Cold-invite loop (GATED on counsel):** export to Procura,
@@ -110,9 +115,11 @@ prisma/schema.prisma     Lead / Suppression / AuditEvent
 src/taxonomy.ts          Procura-aligned categories + regions (shared ids)
 src/lib/                 pure, tested: normalize, categorize, dedupe, quality
                          + side-effecting: fetcher (polite), suppression, audit
-src/connectors/          source connectors (overpass) + offline fixtures
-src/pipeline/            transform (pure) + ingest (orchestration)
-src/cli.ts               operator CLI (collect / list / stats / suppress)
+src/lib/vies.ts          pure VIES request-shaping + response-parsing (tested)
+src/lib/leadRow.ts       row → LeadInput mapper (shared by ingest + verify)
+src/connectors/          source connectors (overpass, all-county) + offline fixtures
+src/pipeline/            transform (pure) + ingest + verify (VAT validation)
+src/cli.ts               operator CLI (collect / verify / list / stats / suppress)
 tests/                   vitest unit tests for the pure libs
 docs/LEGAL.md            the compliance gate
 ```
@@ -120,6 +127,43 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 2 (countrywide coverage + VAT verification)
+
+- **Context:** Phase 1 was complete & green from run 1. Took the documented next
+  step — widen Tier-1 coverage and add VAT verification — as one coherent
+  increment.
+- **Shipped:**
+  - **Overpass countrywide:** replaced the 2-region `AREA_QUERY` map with a pure
+    `areaSelector(regionId)` derived from the shared taxonomy, so `--live` now
+    covers Budapest + all 19 counties (admin_level 6) with zero drift from
+    Procura's region ids.
+  - **VAT/VIES verification (Phase 2 enrichment, no outreach):**
+    - `lib/vies.ts` — pure `huVatCore` / `viesRequestBody` / `parseViesResult`
+      (tolerant of withheld `---`/empty fields).
+    - `pipeline/verify.ts` — selects leads with a VAT number that are unverified
+      or stale (`verifyTtlDays`, default 90), validates them (offline = local HU
+      check digit; `--live` = EU VIES REST), stamps `lastVerifiedAt` + new
+      `vatValid` column, re-scores quality, writes a `VERIFIED` audit row.
+    - `quality.ts` — verified VAT now earns +20 (vs +15 checksum-only); a
+      confirmed-invalid VAT earns 0.
+    - Schema: added `Lead.vatValid Boolean?`. `fetcher.politePost` gained an
+      optional content-type (JSON for VIES). Extracted `lib/leadRow.ts`
+      (row→LeadInput) shared by ingest + verify.
+    - CLI: `verify [--live] [--limit N] [--stale-days N]`; `stats` now shows
+      "VAT verified / valid".
+  - LEGAL.md: VIES added as an Implemented Tier-1 source (validation-only, no
+    data stored from VIES beyond the result); README + layout refreshed.
+  - Tests: +13 (vies, overpass `areaSelector`/`parseOverpass`, quality bonus) →
+    **40/40 green**.
+- **Verified:** `npm test` 40/40; `npm run build` (tsc) clean; offline smoke —
+  collect budapest (7 created, 1 merged), `verify` checked 1 (the one VAT-bearing
+  lead) valid via checksum, re-run idempotent (0), `--stale-days 0` forces a
+  re-check (1), `stats` shows "VAT verified: 1 (valid: 1)".
+- **Next step:** add the **retention/purge job** (the open gap: a lead stored
+  *before* its suppression is skipped on re-ingest but never purged) + a DSAR
+  (access/erasure) CLI; then a second Tier-1 connector (KSH-TEÁOR activity-code
+  mapping, or NAV taxpayer DB — check ToS). Outreach stays gated.
 
 ### 2026-06-14 — run 1 (bootstrap)
 

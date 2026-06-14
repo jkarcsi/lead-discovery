@@ -12,6 +12,7 @@ import { dedupeKey, mergeLead } from "../lib/dedupe.js";
 import { qualityScore } from "../lib/quality.js";
 import { isSuppressed, isDomainSuppressed } from "../lib/suppression.js";
 import { recordAudit } from "../lib/audit.js";
+import { rowToLeadInput } from "../lib/leadRow.js";
 import type { LeadInput } from "../types.js";
 
 export type IngestOptions = {
@@ -32,43 +33,6 @@ export type IngestStats = {
 
 function toLeadInput(raw: ReturnType<typeof transform>, fallbackRegion: string): LeadInput {
   return { ...raw, regionId: raw.regionId ?? fallbackRegion };
-}
-
-// Reconstruct a LeadInput from a stored Lead row so we can merge into it.
-function rowToLeadInput(row: {
-  legalName: string;
-  brandName: string | null;
-  email: string | null;
-  phone: string | null;
-  website: string | null;
-  domain: string | null;
-  address: string | null;
-  vatNumber: string | null;
-  registrationNumber: string | null;
-  regionId: string | null;
-  categories: string;
-  source: string;
-  sourceUrl: string | null;
-  sourceLicense: string | null;
-  isPersonalData: boolean;
-}): LeadInput {
-  return {
-    legalName: row.legalName,
-    brandName: row.brandName,
-    email: row.email,
-    phone: row.phone,
-    website: row.website,
-    domain: row.domain,
-    address: row.address,
-    vatNumber: row.vatNumber,
-    registrationNumber: row.registrationNumber,
-    regionId: row.regionId,
-    categories: JSON.parse(row.categories) as string[],
-    source: row.source,
-    sourceUrl: row.sourceUrl,
-    sourceLicense: row.sourceLicense,
-    isPersonalData: row.isPersonalData,
-  };
 }
 
 export async function ingest(opts: IngestOptions): Promise<IngestStats> {

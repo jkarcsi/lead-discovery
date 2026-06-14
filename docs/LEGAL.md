@@ -66,8 +66,9 @@ compliance-first; the gate ensures we never act on it before it is reviewed.
 
 | Tier | Source | Status here |
 |---|---|---|
-| 1 | **OSM / Overpass** (ODbL, attribution) | **Implemented** (`overpass` connector) |
-| 1 | Company registry (e-cégjegyzék), NAV/VIES VAT, KSH/TEÁOR, MKIK chamber | Planned — most need a contract/licence for automation; check ToS first |
+| 1 | **OSM / Overpass** (ODbL, attribution) | **Implemented** (`overpass` connector, Budapest + all 19 counties) |
+| 1 | **EU VIES VAT validation** (official EC service) | **Implemented** (`verify --live`) — validation only, no data stored from VIES beyond the valid/invalid result |
+| 1 | Company registry (e-cégjegyzék), NAV taxpayer DB, KSH/TEÁOR, MKIK chamber | Planned — most need a contract/licence for automation; check ToS first |
 | 2 | A business's own public contact page (Impresszum/Kapcsolat) | Planned, robots/ToS-gated, rate-limited, general inboxes only |
 | 3 | Google Places & other platforms | **Only** via official API within ToS, as discovery hints — never scraped, never stored as a record of origin |
 

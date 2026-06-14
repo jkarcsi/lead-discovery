@@ -32,7 +32,8 @@ model Lead {
   qualityScore       Int          @default(0)
   lifecycle          String       @default("NEW") // NEW | CONTACTED | RESPONDED | REGISTERED | SUPPRESSED
   collectedAt        DateTime     @default(now())
-  lastVerifiedAt     DateTime?
+  lastVerifiedAt     DateTime? // last VAT verification attempt
+  vatValid           Boolean? // result of that check (null = never verified)
   auditEvents        AuditEvent[]
 
   @@index([regionId])

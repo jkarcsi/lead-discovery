@@ -3,12 +3,14 @@
 //
 //   npm run cli -- collect --source overpass --region budapest
 //   npm run cli -- collect --source overpass --region budapest --live --limit 100
+//   npm run cli -- verify --limit 50            (local checksum; --live = VIES)
 //   npm run cli -- list --region budapest --category cleaning --min-quality 40
 //   npm run cli -- stats
 //   npm run cli -- suppress info@example.hu --kind EMAIL --reason "opt-out"
 
 import { db } from "./db.js";
 import { ingest } from "./pipeline/ingest.js";
+import { verify } from "./pipeline/verify.js";
 import { listConnectors } from "./connectors/index.js";
 import { addSuppression, type SuppressionKind } from "./lib/suppression.js";
 import { CATEGORIES, REGIONS } from "./taxonomy.js";
@@ -57,6 +59,18 @@ async function cmdCollect(flags: Flags): Promise<void> {
   );
 }
 
+async function cmdVerify(flags: Flags): Promise<void> {
+  const live = flags.live === true;
+  const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
+  const staleDays = str(flags, "stale-days") ? Number(str(flags, "stale-days")) : undefined;
+
+  console.log(`Verifying VAT numbers (${live ? "VIES live" : "local checksum"})…`);
+  const stats = await verify({ live, limit, staleDays });
+  console.log(
+    `Done: checked ${stats.checked} via ${stats.method}, valid ${stats.valid}, invalid ${stats.invalid}.`,
+  );
+}
+
 async function cmdList(flags: Flags): Promise<void> {
   const regionId = str(flags, "region");
   const category = str(flags, "category");
@@ -93,7 +107,10 @@ async function cmdStats(): Promise<void> {
   const withEmail = await db.lead.count({ where: { email: { not: null } } });
   const personal = await db.lead.count({ where: { isPersonalData: true } });
   const suppressed = await db.suppression.count();
+  const vatVerified = await db.lead.count({ where: { lastVerifiedAt: { not: null } } });
+  const vatValid = await db.lead.count({ where: { vatValid: true } });
   console.log(`Leads: ${total} (with email: ${withEmail}, personal-data: ${personal})`);
+  console.log(`VAT verified: ${vatVerified} (valid: ${vatValid})`);
   console.log(`Suppression entries: ${suppressed}`);
 
   console.log("\nBy region:");
@@ -128,6 +145,7 @@ function help(): void {
 
 Commands:
   collect --source <id> --region <id> [--live] [--limit N]
+  verify  [--live] [--limit N] [--stale-days N]
   list    [--region <id>] [--category <id>] [--min-quality N] [--limit N]
   stats
   suppress <email|domain> [--kind EMAIL|DOMAIN] [--reason <text>]
@@ -142,6 +160,9 @@ async function main(): Promise<void> {
   switch (cmd) {
     case "collect":
       await cmdCollect(flags);
+      break;
+    case "verify":
+      await cmdVerify(flags);
       break;
     case "list":
       await cmdList(flags);

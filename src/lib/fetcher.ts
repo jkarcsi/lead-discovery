@@ -73,11 +73,17 @@ export async function politeGet(url: string, opts: { checkRobots?: boolean } = {
 }
 
 // Rate-limited POST (Overpass takes the query in the body). Same UA + throttle.
-export async function politePost(url: string, body: string): Promise<string> {
+// `contentType` defaults to text/plain (Overpass); pass application/json for
+// REST APIs like VIES.
+export async function politePost(
+  url: string,
+  body: string,
+  contentType = "text/plain",
+): Promise<string> {
   await throttle(hostOf(url));
   const res = await fetch(url, {
     method: "POST",
-    headers: { ...headers(), "Content-Type": "text/plain" },
+    headers: { ...headers(), "Content-Type": contentType },
     body,
   });
   if (!res.ok) throw new Error(`POST ${url} → ${res.status}`);
