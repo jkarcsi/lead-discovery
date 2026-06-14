@@ -85,7 +85,8 @@ compliance-first; the gate ensures we never act on it before it is reviewed.
 - **Retention job** (implemented, `npm run cli -- purge`): erases never-engaged
   personal-data leads past `PERSONAL_DATA_RETENTION_DAYS`, and any lead now on
   the suppression list. Re-verify business data periodically — still planned.
-- **Provenance** + **Art. 30** record kept current.
+- **Provenance** + **Art. 30** record — `docs/ROPA.md`, generated from the
+  codebase by `npm run cli -- ropa --write` so it tracks what the system does.
 - **Complaint & bounce monitoring** with automatic campaign pause thresholds.
 
 ## How the code enforces the gate

@@ -21,3 +21,9 @@ export function getConnector(id: string): Connector {
 export function listConnectors(): string[] {
   return Object.keys(REGISTRY);
 }
+
+// Source id + data licence for each registered connector — provenance input for
+// the Art. 30 record (see lib/ropa.ts).
+export function connectorSources(): { id: string; license: string }[] {
+  return Object.values(REGISTRY).map((c) => ({ id: c.id, license: c.license }));
+}

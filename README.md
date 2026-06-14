@@ -31,7 +31,8 @@ Procura repo (`docs/lead-discovery-plan.md`).
   + `retention` (erase now-suppressed and expired never-engaged personal-data
   leads, with a detached audit trail)
 - Operator CLI: `collect` / `verify` / `list` / `stats` / `suppress` / `dsar`
-  (access / erasure) / `purge` (no outreach — gated)
+  (access / erasure) / `ropa` (Art. 30 record) / `purge` (no outreach — gated)
+- Compliance artifacts: `docs/LEGAL.md` (the gate) + generated `docs/ROPA.md`
 - Connector coverage: all 19 counties + Budapest (Overpass area mappings derived
   from the shared taxonomy)
 - Unit tests (vitest) for the pure libraries

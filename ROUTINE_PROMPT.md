@@ -49,9 +49,9 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       (robots/ToS-gated), ~~VAT/VIES verification (`lastVerifiedAt`)~~ (done —
       `verify` step), quality scoring refinements, a manual review queue / admin
       surface.
-- [ ] **Retention & DSAR ops:** ~~purge job for never-engaged personal-data
+- [x] **Retention & DSAR ops:** ~~purge job for never-engaged personal-data
       leads~~ (done); ~~DSAR (access/erasure/objection) tooling~~ (done — `dsar`
-      command); Art. 30 record artifact (still to do).
+      command); ~~Art. 30 record artifact~~ (done — `ropa` command + docs/ROPA.md).
 - [ ] **Phase 3 — Cold-invite loop (GATED on counsel):** export to Procura,
       `RfqInvite source=COLD` + `leadId`, tokenized opt-out endpoint, claim &
       convert lead → SupplierProfile, hard caps, complaint/bounce auto-pause,
@@ -123,6 +123,31 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 6 (Art. 30 record-of-processing artifact)
+
+- **Picked up** run 5's next step: the Art. 30 ROPA artifact. This **completes
+  the Retention & DSAR ops checklist item.**
+- **Shipped (green):**
+  - `lib/ropa.ts` (pure): `buildRopa` assembles the Art. 30(1) record from inputs
+    (controller, taxonomy categories, region count, connector sources, retention
+    window, outreach flag); `renderRopaMarkdown` renders the full document. Both
+    tested.
+  - `connectors/index.ts`: `connectorSources()` (id + licence per connector) as
+    provenance input. `config.ts`: controller/DPO placeholders (env-overridable:
+    `ROPA_CONTROLLER_NAME` / `_CONTACT` / `ROPA_DPO_CONTACT`).
+  - `cli.ts`: `ropa [--write]` — prints, or writes `docs/ROPA.md`.
+  - Generated `docs/ROPA.md` and committed it (regenerate with
+    `npm run cli -- ropa --write`). README + LEGAL.md updated.
+- **Verified:** `npm test` 63/63 green (was 59; +4 ROPA tests); `npm run build`
+  clean. `cli ropa --write` produced a complete ROPA reflecting live inputs
+  (6 categories, 20 regions, overpass+vies sources, 365-day retention,
+  OUTREACH_ENABLED=false).
+- **Next step:** with the compliance backbone now complete (collection,
+  verification, suppression, retention/purge, DSAR, ROPA), move to **Phase 2
+  enrichment**: a manual review queue / admin surface for the highest-value
+  leads, and/or Tier-2 public contact-page enrichment (robots/ToS-gated, general
+  inboxes only). Outreach (Phase 3) stays gated on counsel.
 
 ### 2026-06-14 — run 5 (DSAR access / erasure tooling)
 

@@ -7,13 +7,17 @@
 //   npm run cli -- stats
 //   npm run cli -- suppress info@example.hu --kind EMAIL --reason "opt-out"
 
+import { writeFileSync } from "node:fs";
 import { db } from "./db.js";
+import { config } from "./config.js";
 import { ingest } from "./pipeline/ingest.js";
 import { purge } from "./pipeline/purge.js";
 import { verify } from "./pipeline/verify.js";
 import { dsarExport, dsarErase } from "./pipeline/dsar.js";
-import { listConnectors } from "./connectors/index.js";
+import { listConnectors, connectorSources } from "./connectors/index.js";
+import { VIES_LICENSE } from "./connectors/vies.js";
 import { addSuppression, type SuppressionKind } from "./lib/suppression.js";
+import { buildRopa, renderRopaMarkdown } from "./lib/ropa.js";
 import { CATEGORIES, REGIONS } from "./taxonomy.js";
 
 type Flags = Record<string, string | boolean>;
@@ -166,6 +170,29 @@ async function cmdDsar(positional: string[]): Promise<void> {
   }
 }
 
+function cmdRopa(flags: Flags): void {
+  const ropa = buildRopa({
+    generatedAt: new Date(),
+    controller: {
+      name: config.controllerName,
+      contact: config.controllerContact,
+      dpo: config.controllerDpo,
+    },
+    categories: CATEGORIES.map((c) => ({ id: c.id, name: c.name })),
+    regionCount: REGIONS.length,
+    sources: [...connectorSources(), { id: "vies", license: VIES_LICENSE }],
+    personalDataRetentionDays: config.personalDataRetentionDays,
+    outreachEnabled: config.outreachEnabled,
+  });
+  const md = renderRopaMarkdown(ropa);
+  if (flags.write === true) {
+    writeFileSync("docs/ROPA.md", md + "\n");
+    console.log("Wrote docs/ROPA.md");
+  } else {
+    console.log(md);
+  }
+}
+
 function help(): void {
   console.log(`lead-discovery CLI
 
@@ -176,6 +203,7 @@ Commands:
   suppress <email|domain> [--kind EMAIL|DOMAIN] [--reason <text>]
   verify  [--live] [--limit N] [--revalidate]  VAT-check leads against EU VIES
   dsar    <export|erase> <email>   data-subject access / erasure (GDPR)
+  ropa    [--write]   print (or write docs/ROPA.md) the Art. 30 record
   purge   [--dry-run]   erase now-suppressed + expired personal-data leads
 
 Connectors: ${listConnectors().join(", ")}
@@ -203,6 +231,9 @@ async function main(): Promise<void> {
       break;
     case "dsar":
       await cmdDsar(positional);
+      break;
+    case "ropa":
+      cmdRopa(flags);
       break;
     case "purge":
       await cmdPurge(flags);
