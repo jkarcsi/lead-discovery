@@ -43,8 +43,8 @@ minimize wasted round-trips, and keep crawls resilient and idempotent. See
   parser); EU VIES `verify` enrichment. Overlapping businesses merge across
   sources on the dedupe key.
 - Pipeline: concurrent multi-region `ingest` → batched `store`
-- Operator CLI: `collect` / `verify` / `review` / `list` / `stats` / `suppress`
-  / `dsar` / `ropa` / `purge`
+- Operator CLI: `collect` / `verify` (VIES) / `nav` (tax-status) / `review` /
+  `list` / `stats` / `suppress` / `dsar` / `ropa` / `purge`
 
 Roadmap and progress: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 

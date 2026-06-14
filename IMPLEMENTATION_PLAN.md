@@ -40,7 +40,7 @@ merge across sources on the dedupe key (VAT → domain → name+region).
 |---|--------|------|--------|
 | 1 | OSM / Overpass | Discovery POIs | ✅ all 20 regions |
 | 2 | e-beszámoló / Céginformációs Szolgálat | Company master + reg. number + TEÁOR | ✅ connector |
-| 3 | NAV databases | Verification / risk signals | ◻ next |
+| 3 | NAV databases | Verification / risk signals | ✅ `nav` step |
 | 4 | VIES (EU VAT) | VAT validation | ✅ `verify` step |
 | 5 | Közbeszerzés (EKR / TED) | Active-supplier proof | ◻ |
 | 6 | KSH-TEÁOR | Classification reference | ◻ |
@@ -57,8 +57,8 @@ merge across sources on the dedupe key (VAT → domain → name+region).
   Overpass connector (all 20 regions), batched concurrent ingest, operator CLI.
 - 🟡 **M1a — Registry backbone:** e-beszámoló connector (master data + registration
   number + TEÁOR, enriches existing leads by VAT). Remaining: financial fields.
-- ◻ **M1b — Tax verification:** NAV connector (headcount, debt-free flag,
-  execution-risk signals); batch driver over the existing VIES `verify`.
+- 🟡 **M1b — Tax verification:** ✅ NAV `nav` step (tax status, debt-free flag,
+  headcount, risk reasons). Remaining: a VIES batch driver / scheduling.
 - ◻ **M1c — Procurement signal:** EKR / Közbeszerzési Értesítő / TED connector;
   CPV → taxonomy mapping.
 - ◻ **M1d — Classification & cross-check:** KSH-TEÁOR tables, MKIK, OpenCorporates.
@@ -133,6 +133,13 @@ docs/ROPA.md           generated processing record
 
 ### 2026-06-14
 
+- **M1b — tax verification:** added the NAV `nav` enrichment step
+  (`connectors/nav.ts` client + `lib/navParse.ts` pure parser/risk flags +
+  `pipeline/navVerify.ts`). For each VAT-bearing lead it records tax status
+  (active/suspended/cancelled), debt-free flag (köztartozásmentes), and headcount
+  onto the lead, with a `NAV_CHECKED` audit; `stats` shows a NAV summary. New
+  `Lead` fields: `taxStatus`, `debtFree`, `employeeCount`, `navCheckedAt`.
+  104 tests green.
 - **Plan reframed** from a development routine into this implementation plan
   (renamed from `ROUTINE_PROMPT.md`); efficiency-first throughout.
 - **M1a — registry backbone:** added the e-beszámoló / Céginformációs Szolgálat
@@ -148,6 +155,6 @@ docs/ROPA.md           generated processing record
 
 ### Next
 
-M1b — NAV verification connector (headcount / debt-free flag / execution-risk
-signals), or financial fields for the e-beszámoló record, built via the
-paginated-source factory.
+M1c — procurement-signal connector (EKR / Közbeszerzési Értesítő / TED) with
+CPV → taxonomy mapping, via the paginated-source factory; or financial fields
+for the e-beszámoló record.

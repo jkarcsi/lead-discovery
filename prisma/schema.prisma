@@ -36,6 +36,11 @@ model Lead {
   reviewedAt         DateTime?
   collectedAt        DateTime     @default(now())
   lastVerifiedAt     DateTime?
+  // NAV (tax authority) signals — added by the `nav` enrichment step.
+  taxStatus          String? // ACTIVE | SUSPENDED | CANCELLED | UNKNOWN
+  debtFree           Boolean? // köztartozásmentes adózó
+  employeeCount      Int?
+  navCheckedAt       DateTime?
   auditEvents        AuditEvent[]
 
   @@index([regionId])

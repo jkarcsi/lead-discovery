@@ -1,0 +1,5 @@
+{
+  "10773381": { "taxStatus": "ACTIVE", "debtFree": true, "employeeCount": 12 },
+  "10000000": { "taxStatus": "SUSPENDED", "debtFree": false, "employeeCount": 3 },
+  "12345676": { "taxStatus": "CANCELLED", "debtFree": false, "employeeCount": 0 }
+}

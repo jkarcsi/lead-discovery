@@ -10,6 +10,7 @@ export type AuditType =
   | "OPT_OUT"
   | "DSAR"
   | "VERIFIED"
+  | "NAV_CHECKED"
   | "REGISTERED"
   | "SUPPRESSED_SKIP"
   | "REVIEWED"

@@ -13,6 +13,7 @@ import { config } from "./config.js";
 import { ingest } from "./pipeline/ingest.js";
 import { purge } from "./pipeline/purge.js";
 import { verify } from "./pipeline/verify.js";
+import { navVerify } from "./pipeline/navVerify.js";
 import { dsarExport, dsarErase } from "./pipeline/dsar.js";
 import { reviewQueue, setReview } from "./pipeline/review.js";
 import { listConnectors, connectorSources } from "./connectors/index.js";
@@ -121,6 +122,12 @@ async function cmdStats(): Promise<void> {
   const rejected = await db.lead.count({ where: { reviewStatus: "REJECTED" } });
   console.log(`Leads: ${total} (with email: ${withEmail}, personal-data: ${personal})`);
   console.log(`Review: ${pending} pending, ${approved} approved, ${rejected} rejected`);
+  const navChecked = await db.lead.count({ where: { navCheckedAt: { not: null } } });
+  if (navChecked > 0) {
+    const active = await db.lead.count({ where: { taxStatus: "ACTIVE" } });
+    const debtFree = await db.lead.count({ where: { debtFree: true } });
+    console.log(`NAV: ${navChecked} checked (${active} active, ${debtFree} debt-free)`);
+  }
   console.log(`Suppression entries: ${suppressed}`);
 
   console.log("\nBy region:");
@@ -167,6 +174,19 @@ async function cmdVerify(flags: Flags): Promise<void> {
   console.log(
     `Done: scanned ${s.scanned}, valid ${s.valid}, invalid ${s.invalid}, ` +
       `enriched ${s.enriched}, skipped ${s.skipped}.`,
+  );
+}
+
+async function cmdNav(flags: Flags): Promise<void> {
+  const live = flags.live === true;
+  const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
+  const revalidate = flags.revalidate === true;
+  console.log(`Checking tax numbers against NAV (${live ? "LIVE" : "fixture"})…`);
+  const s = await navVerify({ live, limit, revalidate });
+  console.log(
+    `Done: scanned ${s.scanned}, checked ${s.checked} (active ${s.active}, ` +
+      `suspended ${s.suspended}, cancelled ${s.cancelled}, debt-free ${s.debtFree}), ` +
+      `skipped ${s.skipped}.`,
   );
 }
 
@@ -265,6 +285,7 @@ Commands:
   review  queue [--region <id>] [--category <id>] [--limit N]
   review  <approve|reject> <leadId> [--note <text>]
   verify  [--live] [--limit N] [--revalidate]  VAT-check leads against EU VIES
+  nav     [--live] [--limit N] [--revalidate]  tax-status check against NAV
   dsar    <export|erase> <email>   data-subject access / erasure (GDPR)
   ropa    [--write]   print (or write docs/ROPA.md) the Art. 30 record
   purge   [--dry-run]   erase now-suppressed + expired personal-data leads
@@ -291,6 +312,9 @@ async function main(): Promise<void> {
       break;
     case "verify":
       await cmdVerify(flags);
+      break;
+    case "nav":
+      await cmdNav(flags);
       break;
     case "dsar":
       await cmdDsar(positional);
