@@ -46,8 +46,8 @@ merge across sources on the dedupe key (VAT → domain → name+region).
 | 6 | KSH-TEÁOR | Classification reference | ✅ TEÁOR→taxonomy mapping |
 | 7 | MKIK chamber | Coverage cross-check | ✅ `mkik` connector |
 | 8 | OpenCorporates | Aggregator / normalization | ✅ connector + reg-number dedupe |
-| 9 | Google Places API | Contact enrichment (official API) | ◻ |
-| 10 | Website contact pages | Email / phone enrichment | ◻ `htmldir` scraper exists |
+| 9 | Google Places API | Contact enrichment (official API) | ✅ `places` step |
+| 10 | Website contact pages | Email / phone enrichment | ✅ `enrich` step |
 | 11 | Aranyoldalak / Telefonkönyv | Listings | ◻ generic paginated connector exists |
 | 12 | EVNY (sole traders) | Sole-trader coverage | ◻ flag-gated, last |
 
@@ -63,8 +63,9 @@ merge across sources on the dedupe key (VAT → domain → name+region).
   active suppliers) with CPV → taxonomy mapping.
 - ✅ **M1d — Classification & cross-check:** TEÁOR→taxonomy mapping; MKIK chamber
   connector; OpenCorporates connector + registration-number dedupe tier.
-- ◻ **M2 — Tier-2 enrichment:** Google Places (official API) + polite crawl;
-  quality-scoring refinements.
+- ✅ **M2 — Tier-2 enrichment:** contact-page `enrich` (email/phone from sites),
+  Google `places` enrichment (phone/website/address), quality-scoring refinement
+  (registration-number bonus).
 - ◻ **M2s — Sole traders (EVNY):** behind an explicit flag, built last.
 - ◻ **M3 — Scale & operate:** throughput dashboards, scheduled incremental
   refresh, export to Procura.
@@ -134,6 +135,12 @@ docs/ROPA.md           generated processing record
 
 ### 2026-06-14
 
+- **M2 — Tier-2 enrichment:** `enrich` (contact-page email/phone via a pure
+  `extractContacts` + a fixture/live `contactPage` client) and `places` (Google
+  Places phone/website/address via a pure `parsePlace` + fixture/live client),
+  both filling gaps only, recomputing quality, stamping `*CheckedAt`. Quality
+  scorer now credits a registration number. Shared `lib/html.ts` (decode/strip)
+  extracted. 126 tests green.
 - **M1d — normalization/dedupe (OpenCorporates):** added a **registration-number
   dedupe tier** (VAT → reg.number → domain → name+region) so registry/aggregator
   records sharing a cégjegyzékszám merge even without a VAT or across name

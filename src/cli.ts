@@ -14,6 +14,8 @@ import { ingest } from "./pipeline/ingest.js";
 import { purge } from "./pipeline/purge.js";
 import { verify } from "./pipeline/verify.js";
 import { navVerify } from "./pipeline/navVerify.js";
+import { enrichContacts } from "./pipeline/enrich.js";
+import { placesEnrich } from "./pipeline/placesEnrich.js";
 import { dsarExport, dsarErase } from "./pipeline/dsar.js";
 import { reviewQueue, setReview } from "./pipeline/review.js";
 import { listConnectors, connectorSources } from "./connectors/index.js";
@@ -190,6 +192,31 @@ async function cmdNav(flags: Flags): Promise<void> {
   );
 }
 
+async function cmdEnrich(flags: Flags): Promise<void> {
+  const live = flags.live === true;
+  const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
+  const revalidate = flags.revalidate === true;
+  console.log(`Enriching contacts from websites (${live ? "LIVE" : "fixture"})…`);
+  const s = await enrichContacts({ live, limit, revalidate });
+  console.log(
+    `Done: scanned ${s.scanned}, enriched ${s.enriched} ` +
+      `(+${s.emailsAdded} email, +${s.phonesAdded} phone), skipped ${s.skipped}.`,
+  );
+}
+
+async function cmdPlaces(flags: Flags): Promise<void> {
+  const live = flags.live === true;
+  const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
+  const revalidate = flags.revalidate === true;
+  console.log(`Enriching from Google Places (${live ? "LIVE" : "fixture"})…`);
+  const s = await placesEnrich({ live, limit, revalidate });
+  console.log(
+    `Done: scanned ${s.scanned}, enriched ${s.enriched} ` +
+      `(+${s.phonesAdded} phone, +${s.websitesAdded} website, +${s.addressesAdded} address), ` +
+      `skipped ${s.skipped}.`,
+  );
+}
+
 async function cmdPurge(flags: Flags): Promise<void> {
   const dryRun = flags["dry-run"] === true;
   const stats = await purge({ dryRun });
@@ -286,6 +313,8 @@ Commands:
   review  <approve|reject> <leadId> [--note <text>]
   verify  [--live] [--limit N] [--revalidate]  VAT-check leads against EU VIES
   nav     [--live] [--limit N] [--revalidate]  tax-status check against NAV
+  enrich  [--live] [--limit N] [--revalidate]  fill missing email/phone from sites
+  places  [--live] [--limit N] [--revalidate]  fill phone/website/address via Places
   dsar    <export|erase> <email>   data-subject access / erasure (GDPR)
   ropa    [--write]   print (or write docs/ROPA.md) the Art. 30 record
   purge   [--dry-run]   erase now-suppressed + expired personal-data leads
@@ -315,6 +344,12 @@ async function main(): Promise<void> {
       break;
     case "nav":
       await cmdNav(flags);
+      break;
+    case "enrich":
+      await cmdEnrich(flags);
+      break;
+    case "places":
+      await cmdPlaces(flags);
       break;
     case "dsar":
       await cmdDsar(positional);

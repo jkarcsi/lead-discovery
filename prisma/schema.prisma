@@ -41,6 +41,8 @@ model Lead {
   debtFree           Boolean? // köztartozásmentes adózó
   employeeCount      Int?
   navCheckedAt       DateTime?
+  contactCheckedAt   DateTime? // Tier-2 contact-page enrichment
+  placesCheckedAt    DateTime? // Tier-2 Google Places enrichment
   auditEvents        AuditEvent[]
 
   @@index([regionId])

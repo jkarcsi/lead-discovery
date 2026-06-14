@@ -5,26 +5,7 @@
 // — tuned to a known directory's markup, not a general HTML engine.
 
 import type { ParseContext, RawBusiness } from "../types.js";
-
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  nbsp: " ",
-};
-
-function decodeEntities(s: string): string {
-  return s
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (_, e) => NAMED_ENTITIES[e] ?? `&${e};`);
-}
-
-function stripTags(s: string): string {
-  return decodeEntities(s.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
-}
+import { stripTags } from "./html.js";
 
 // Inner text of the first element carrying class `cls` within a card.
 function fieldText(card: string, cls: string): string | null {

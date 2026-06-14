@@ -2,7 +2,7 @@
 // Higher = more complete and verifiable. Used to rank the review queue and to
 // gate which leads are eligible for (gated) cold outreach later.
 
-import { isValidHuVat } from "./normalize.js";
+import { isValidHuVat, isValidRegNumber } from "./normalize.js";
 import type { LeadInput } from "../types.js";
 
 export function qualityScore(lead: LeadInput): number {
@@ -14,5 +14,7 @@ export function qualityScore(lead: LeadInput): number {
   if (lead.regionId) score += 10;
   if (lead.categories.length > 0) score += 15;
   if (lead.vatNumber && isValidHuVat(lead.vatNumber)) score += 15;
+  // Authoritative company identity (cégjegyzékszám) when no VAT is present.
+  else if (lead.registrationNumber && isValidRegNumber(lead.registrationNumber)) score += 10;
   return Math.min(100, score);
 }

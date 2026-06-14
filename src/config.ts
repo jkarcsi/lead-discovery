@@ -12,6 +12,7 @@ export const config = {
   kozbeszerzesUrl: process.env.KOZBESZERZES_URL || "https://ekr.gov.hu/api/ertesito",
   mkikUrl: process.env.MKIK_URL || "https://kamreg.mkik.hu/api",
   openCorporatesUrl: process.env.OPENCORPORATES_URL || "https://api.opencorporates.com/v0.4/companies/hu",
+  placesUrl: process.env.PLACES_URL || "https://places.googleapis.com/v1/places:searchText",
   directoryMaxPages: Number(process.env.DIRECTORY_MAX_PAGES || 50),
 
   // --- Throughput knobs (the whole point: collect fast and reliably) ---

@@ -11,6 +11,7 @@ export type AuditType =
   | "DSAR"
   | "VERIFIED"
   | "NAV_CHECKED"
+  | "ENRICHED"
   | "REGISTERED"
   | "SUPPRESSED_SKIP"
   | "REVIEWED"
