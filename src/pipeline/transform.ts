@@ -38,7 +38,8 @@ export function transform(raw: RawBusiness): LeadInput {
   const classificationText = [raw.classificationText, raw.legalName, raw.brandName]
     .filter(Boolean)
     .join(" ");
-  const categories = categorize(classificationText);
+  // Keyword-derived categories, unioned with any the connector provided (CPV).
+  const categories = Array.from(new Set([...categorize(classificationText), ...(raw.categories ?? [])]));
   const regionId = detectRegion(raw.address);
 
   return {

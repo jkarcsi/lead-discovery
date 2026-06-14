@@ -42,7 +42,7 @@ merge across sources on the dedupe key (VAT → domain → name+region).
 | 2 | e-beszámoló / Céginformációs Szolgálat | Company master + reg. number + TEÁOR | ✅ connector |
 | 3 | NAV databases | Verification / risk signals | ✅ `nav` step |
 | 4 | VIES (EU VAT) | VAT validation | ✅ `verify` step |
-| 5 | Közbeszerzés (EKR / TED) | Active-supplier proof | ◻ |
+| 5 | Közbeszerzés (EKR / TED) | Active-supplier proof | ✅ `kozbeszerzes` (CPV→taxonomy) |
 | 6 | KSH-TEÁOR | Classification reference | ◻ |
 | 7 | MKIK chamber | Coverage cross-check | ◻ |
 | 8 | OpenCorporates | Aggregator / normalization | ◻ |
@@ -59,8 +59,8 @@ merge across sources on the dedupe key (VAT → domain → name+region).
   number + TEÁOR, enriches existing leads by VAT). Remaining: financial fields.
 - 🟡 **M1b — Tax verification:** ✅ NAV `nav` step (tax status, debt-free flag,
   headcount, risk reasons). Remaining: a VIES batch driver / scheduling.
-- ◻ **M1c — Procurement signal:** EKR / Közbeszerzési Értesítő / TED connector;
-  CPV → taxonomy mapping.
+- ✅ **M1c — Procurement signal:** `kozbeszerzes` connector (award winners =
+  active suppliers) with CPV → taxonomy mapping.
 - ◻ **M1d — Classification & cross-check:** KSH-TEÁOR tables, MKIK, OpenCorporates.
 - ◻ **M2 — Tier-2 enrichment:** Google Places (official API) + polite crawl;
   quality-scoring refinements.
@@ -133,6 +133,12 @@ docs/ROPA.md           generated processing record
 
 ### 2026-06-14
 
+- **M1c — procurement signal:** added the `kozbeszerzes` connector (paginated
+  factory) + `lib/procurementParse.ts` + `lib/cpv.ts` (CPV → taxonomy). Award
+  winners are discovered as active suppliers and **authoritatively categorized
+  from CPV codes** — even with no descriptive text. `RawBusiness.categories` hint
+  added; `transform` unions connector-provided categories with keyword-derived
+  ones. 111 tests green.
 - **M1b — tax verification:** added the NAV `nav` enrichment step
   (`connectors/nav.ts` client + `lib/navParse.ts` pure parser/risk flags +
   `pipeline/navVerify.ts`). For each VAT-bearing lead it records tax status
@@ -155,6 +161,5 @@ docs/ROPA.md           generated processing record
 
 ### Next
 
-M1c — procurement-signal connector (EKR / Közbeszerzési Értesítő / TED) with
-CPV → taxonomy mapping, via the paginated-source factory; or financial fields
-for the e-beszámoló record.
+M1d — classification & cross-check: KSH-TEÁOR reference tables, MKIK chamber
+coverage, OpenCorporates normalization/dedupe.

@@ -1,0 +1,28 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "id": "KE-2026-00123",
+      "supplierName": "Tiszta Iroda Kft.",
+      "supplierVat": "HU10773381",
+      "supplierAddress": "1051 Budapest, Arany János utca 10.",
+      "cpvCodes": ["90919200-4"],
+      "title": "Önkormányzati épületek irodatakarítási szolgáltatása"
+    },
+    {
+      "id": "KE-2026-00210",
+      "supplierName": "Fővárosi IT Üzemeltető Zrt.",
+      "supplierVat": "HU12345676",
+      "supplierAddress": "1075 Budapest, Károly körút 1.",
+      "cpvCodes": ["72500000-0", "72611000-6"],
+      "title": "Informatikai rendszerüzemeltetés és support"
+    },
+    {
+      "id": "KE-2026-00311",
+      "supplierName": "Pajzs Vagyonvédelmi Kft.",
+      "supplierAddress": "1138 Budapest, Dunavirág utca 2.",
+      "cpvCodes": ["79713000-5"],
+      "title": "Intézményi őrzés-védelmi szolgáltatás"
+    }
+  ]
+}

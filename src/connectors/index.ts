@@ -6,12 +6,14 @@ import { overpassConnector } from "./overpass.js";
 import { directoryConnector } from "./directory.js";
 import { htmlDirectoryConnector } from "./htmlDirectory.js";
 import { ebeszamoloConnector } from "./ebeszamolo.js";
+import { kozbeszerzesConnector } from "./kozbeszerzes.js";
 
 const REGISTRY: Record<string, Connector> = {
   [overpassConnector.id]: overpassConnector,
   [directoryConnector.id]: directoryConnector,
   [htmlDirectoryConnector.id]: htmlDirectoryConnector,
   [ebeszamoloConnector.id]: ebeszamoloConnector,
+  [kozbeszerzesConnector.id]: kozbeszerzesConnector,
 };
 
 export function getConnector(id: string): Connector {

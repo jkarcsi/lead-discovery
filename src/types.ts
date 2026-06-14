@@ -10,6 +10,9 @@ export type RawBusiness = {
   registrationNumber?: string | null;
   // Free-text hints (OSM tags, activity descriptions) used for categorization.
   classificationText?: string | null;
+  // Authoritative category ids a connector already knows (e.g. CPV-mapped),
+  // merged with keyword-derived categories in transform.
+  categories?: string[];
   source: string;
   sourceUrl?: string | null;
   sourceLicense?: string | null;

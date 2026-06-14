@@ -9,6 +9,7 @@ export const config = {
   htmlDirectoryUrl: process.env.HTML_DIRECTORY_URL || "https://example-listing.test",
   ebeszamoloUrl: process.env.EBESZAMOLO_URL || "https://e-beszamolo.im.gov.hu/api",
   navUrl: process.env.NAV_URL || "https://api.nav.gov.hu/taxpayer",
+  kozbeszerzesUrl: process.env.KOZBESZERZES_URL || "https://ekr.gov.hu/api/ertesito",
   directoryMaxPages: Number(process.env.DIRECTORY_MAX_PAGES || 50),
 
   // --- Throughput knobs (the whole point: collect fast and reliably) ---
