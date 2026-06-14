@@ -49,8 +49,9 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       (robots/ToS-gated), ~~VAT/VIES verification (`lastVerifiedAt`)~~ (done —
       `verify` step), quality scoring refinements, a manual review queue / admin
       surface.
-- [ ] **Retention & DSAR ops:** purge job for never-engaged personal-data leads;
-      DSAR (access/erasure/objection) tooling; Art. 30 record artifact.
+- [ ] **Retention & DSAR ops:** ~~purge job for never-engaged personal-data
+      leads~~ (done); ~~DSAR (access/erasure/objection) tooling~~ (done — `dsar`
+      command); Art. 30 record artifact (still to do).
 - [ ] **Phase 3 — Cold-invite loop (GATED on counsel):** export to Procura,
       `RfqInvite source=COLD` + `leadId`, tokenized opt-out endpoint, claim &
       convert lead → SupplierProfile, hard caps, complaint/bounce auto-pause,
@@ -122,6 +123,34 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 5 (DSAR access / erasure tooling)
+
+- **Picked up** run 3's next step: the DSAR data-subject-rights CLI surface.
+- **Shipped (Retention & DSAR ops, green):**
+  - `lib/dsar.ts` (pure): `buildDsarReport` — assembles a portable Art. 15/20
+    record from a subject's leads (provenance, parsed categories, ISO dates) +
+    each lead's full audit trail. Tested.
+  - `pipeline/dsar.ts`: `dsarExport(email)` (logs a `DSAR` access event per
+    lead, returns the report) and `dsarErase(email)` (erases the subject's leads
+    and adds a permanent **email-only** suppression — never the whole domain, so
+    one person's objection can't block their employer's general contact).
+  - `pipeline/erase.ts`: extracted the shared `eraseLead(lead, type, meta)`
+    primitive (detached, personal-data-free audit row + delete); **purge** now
+    reuses it instead of its own inline copy.
+  - `cli.ts`: `dsar <export|erase> <email>`. README + LEGAL.md (DSAR marked
+    implemented).
+- **Verified:** `npm test` 59/59 green (was 55; +4 DSAR unit tests);
+  `npm run build` clean. Offline smoke: `dsar export nagy.peter@gmail.com`
+  returned the sole-trader lead with provenance + COLLECTED audit; `dsar erase`
+  removed it + suppressed; re-export shows leadCount 0; re-collect skips the
+  subject (suppressed); `purge --dry-run` still works after the eraseLead
+  refactor.
+- **Next step:** the **Art. 30 record-of-processing** artifact — a generated
+  `docs/ROPA.md` (or a `cli -- ropa` report) describing purposes, categories of
+  data/subjects, sources/recipients, retention, and the lawful basis, drawn from
+  taxonomy + config so it stays current. After that: Tier-2 public contact-page
+  enrichment (robots/ToS-gated) or a manual review queue.
 
 ### 2026-06-14 — run 4 (branch consolidation → main)
 

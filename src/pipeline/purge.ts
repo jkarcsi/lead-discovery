@@ -9,8 +9,8 @@
 
 import { db } from "../db.js";
 import { config } from "../config.js";
-import { recordAudit } from "../lib/audit.js";
 import { purgeDecision, type RetentionPolicy } from "../lib/retention.js";
+import { eraseLead } from "./erase.js";
 
 export type PurgeOptions = {
   dryRun?: boolean;
@@ -65,13 +65,7 @@ export async function purge(opts: PurgeOptions = {}): Promise<PurgeStats> {
 
     if (dryRun) continue;
 
-    await recordAudit(null, "PURGED", {
-      leadId: lead.id,
-      reason,
-      source: lead.source,
-      regionId: lead.regionId,
-    });
-    await db.lead.delete({ where: { id: lead.id } });
+    await eraseLead(lead, "PURGED", { reason });
   }
 
   return stats;

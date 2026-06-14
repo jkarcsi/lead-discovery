@@ -11,6 +11,7 @@ import { db } from "./db.js";
 import { ingest } from "./pipeline/ingest.js";
 import { purge } from "./pipeline/purge.js";
 import { verify } from "./pipeline/verify.js";
+import { dsarExport, dsarErase } from "./pipeline/dsar.js";
 import { listConnectors } from "./connectors/index.js";
 import { addSuppression, type SuppressionKind } from "./lib/suppression.js";
 import { CATEGORIES, REGIONS } from "./taxonomy.js";
@@ -147,6 +148,24 @@ async function cmdPurge(flags: Flags): Promise<void> {
   );
 }
 
+async function cmdDsar(positional: string[]): Promise<void> {
+  const action = positional[0];
+  const email = positional[1];
+  if (!email) throw new Error("usage: dsar <export|erase> <email>");
+  if (action === "export") {
+    const report = await dsarExport(email);
+    console.log(JSON.stringify(report, null, 2));
+  } else if (action === "erase") {
+    const res = await dsarErase(email);
+    console.log(
+      `DSAR erase for "${res.subject}": erased ${res.erased} lead(s) and ` +
+        `suppressed the address permanently.`,
+    );
+  } else {
+    throw new Error(`Unknown dsar action "${action ?? ""}". Use "export" or "erase".`);
+  }
+}
+
 function help(): void {
   console.log(`lead-discovery CLI
 
@@ -156,6 +175,7 @@ Commands:
   stats
   suppress <email|domain> [--kind EMAIL|DOMAIN] [--reason <text>]
   verify  [--live] [--limit N] [--revalidate]  VAT-check leads against EU VIES
+  dsar    <export|erase> <email>   data-subject access / erasure (GDPR)
   purge   [--dry-run]   erase now-suppressed + expired personal-data leads
 
 Connectors: ${listConnectors().join(", ")}
@@ -180,6 +200,9 @@ async function main(): Promise<void> {
       break;
     case "verify":
       await cmdVerify(flags);
+      break;
+    case "dsar":
+      await cmdDsar(positional);
       break;
     case "purge":
       await cmdPurge(flags);

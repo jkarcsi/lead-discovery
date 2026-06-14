@@ -77,7 +77,11 @@ compliance-first; the gate ensures we never act on it before it is reviewed.
 - Public **privacy notice** (sources, basis, retention, rights).
 - **LIA + DPIA** completed and signed off.
 - **Opt-out endpoint** (tokenized, no login) → instant global suppression.
-- **DSAR** workflow (access / erasure / objection) with an SLA + audit.
+- **DSAR** workflow (access / erasure / objection) with an SLA + audit —
+  **implemented**: `dsar export <email>` returns a portable copy of everything
+  held about a subject plus its audit trail; `dsar erase <email>` erases their
+  leads and adds a permanent (email-only) suppression so re-collection can't
+  resurrect them.
 - **Retention job** (implemented, `npm run cli -- purge`): erases never-engaged
   personal-data leads past `PERSONAL_DATA_RETENTION_DAYS`, and any lead now on
   the suppression list. Re-verify business data periodically — still planned.

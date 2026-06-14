@@ -30,8 +30,8 @@ Procura repo (`docs/lead-discovery-plan.md`).
 - Compliance: `suppression` (global do-not-contact, checked at ingest) + `audit`
   + `retention` (erase now-suppressed and expired never-engaged personal-data
   leads, with a detached audit trail)
-- Operator CLI: `collect` / `verify` / `list` / `stats` / `suppress` / `purge`
-  (no outreach — gated)
+- Operator CLI: `collect` / `verify` / `list` / `stats` / `suppress` / `dsar`
+  (access / erasure) / `purge` (no outreach — gated)
 - Connector coverage: all 19 counties + Budapest (Overpass area mappings derived
   from the shared taxonomy)
 - Unit tests (vitest) for the pure libraries
