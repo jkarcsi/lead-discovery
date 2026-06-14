@@ -10,7 +10,7 @@ import { config } from "../config.js";
 import { politePost } from "../lib/fetcher.js";
 import { REGIONS } from "../taxonomy.js";
 import type { RawBusiness } from "../types.js";
-import type { CollectOptions, Connector } from "./types.js";
+import type { CollectOptions, CollectResult, Connector } from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const LICENSE = "ODbL";
@@ -103,7 +103,8 @@ function loadFixture(regionId: string): OverpassResponse {
 export const overpassConnector: Connector = {
   id: "overpass",
   license: LICENSE,
-  async collect({ regionId, live, limit = 200 }: CollectOptions): Promise<RawBusiness[]> {
+  // Single Overpass query per region — not paginated, so no resume cursor.
+  async collect({ regionId, live, limit = 200 }: CollectOptions): Promise<CollectResult> {
     let json: OverpassResponse;
     if (live) {
       const body = buildQuery(regionId, limit);
@@ -111,7 +112,7 @@ export const overpassConnector: Connector = {
     } else {
       json = loadFixture(regionId);
     }
-    const records = parseOverpass(json, regionId);
-    return typeof limit === "number" ? records.slice(0, limit) : records;
+    const all = parseOverpass(json, regionId);
+    return { records: typeof limit === "number" ? all.slice(0, limit) : all };
   },
 };

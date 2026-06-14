@@ -12,27 +12,38 @@ function fakeSource(total: number) {
 }
 
 describe("collectPages", () => {
-  it("collects all pages in order and stops at the first empty page", async () => {
+  it("collects all pages in order and reports the last non-empty page", async () => {
     const { fetchPage } = fakeSource(3);
     const out = await collectPages(fetchPage, { window: 2, maxPages: 50 });
-    expect(out).toEqual(["1a", "1b", "2a", "2b", "3a", "3b"]);
+    expect(out.items).toEqual(["1a", "1b", "2a", "2b", "3a", "3b"]);
+    expect(out.lastPage).toBe(3);
   });
 
   it("respects maxPages even if more pages exist", async () => {
     const { fetchPage } = fakeSource(100);
     const out = await collectPages(fetchPage, { window: 4, maxPages: 2 });
-    expect(out).toEqual(["1a", "1b", "2a", "2b"]);
+    expect(out.items).toEqual(["1a", "1b", "2a", "2b"]);
+    expect(out.lastPage).toBe(2);
+  });
+
+  it("resumes from startPage and reports an absolute lastPage", async () => {
+    const { fetchPage, calls } = fakeSource(5);
+    const out = await collectPages(fetchPage, { window: 2, maxPages: 50, startPage: 4 });
+    expect(out.items).toEqual(["4a", "4b", "5a", "5b"]);
+    expect(out.lastPage).toBe(5);
+    expect(Math.min(...calls)).toBe(4); // never re-fetched pages 1-3
   });
 
   it("fetches within a window concurrently (one over-fetched window is fine)", async () => {
     const { fetchPage, calls } = fakeSource(2);
     await collectPages(fetchPage, { window: 3, maxPages: 50 });
-    // First window 1-3 is fetched together; page 3 is empty → stop.
     expect(calls.sort((a, b) => a - b)).toEqual([1, 2, 3]);
   });
 
-  it("returns nothing when the first page is already empty", async () => {
+  it("returns nothing (lastPage = startPage-1) when the first page is empty", async () => {
     const { fetchPage } = fakeSource(0);
-    expect(await collectPages(fetchPage, { window: 2, maxPages: 10 })).toEqual([]);
+    const out = await collectPages(fetchPage, { window: 2, maxPages: 10, startPage: 7 });
+    expect(out.items).toEqual([]);
+    expect(out.lastPage).toBe(6);
   });
 });

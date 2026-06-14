@@ -47,9 +47,9 @@ project measurably forward and leave the repo **green** (`npm test` +
       bulk store), operator CLI, unit tests. **Done & green.**
 - [~] **Phase 2 — Throughput & coverage (current focus):** ~~generic paginated
       JSON `directory` connector + parser with concurrent page fetch~~ (done);
-      still to do: more real sources (registries / map platforms), resumable/
-      incremental crawl state, per-host concurrency. VIES `verify` enrichment
-      done.
+      ~~resumable/incremental crawl state~~ (done — `CrawlState` cursor + `--full`);
+      still to do: more real sources (registries / map platforms), a light HTML
+      parser, per-host concurrency. VIES `verify` enrichment done.
 - [ ] **Phase 3 — Scale & data quality:** quality-scoring refinements, fuzzy
       dedupe across sources, embeddings-assisted categorization (when an API key
       is available), large-batch performance (streaming, write-batching tuning).
@@ -125,6 +125,34 @@ docs/SCOPE.md            scope note (efficiency-only; legality handled elsewhere
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 10 (Phase 2: resumable/incremental crawl state)
+
+- **Picked up** run 9's next step: per-(source, region) crawl cursors so re-runs
+  fetch only new pages.
+- **Shipped (green):**
+  - Schema: `CrawlState` model (`source`, `regionId`, `lastPage`, `totalSeen`,
+    `lastRunAt`, unique `[source, regionId]`).
+  - Connector interface: `collect` now returns `CollectResult { records, cursor? }`
+    (overpass = no cursor; directory reports `{ lastPage }`). `CollectOptions`
+    gained `startPage`.
+  - `lib/paginate.ts`: `collectPages` now returns `{ items, lastPage }` and honors
+    `startPage` (resume); reports the highest non-empty page (absolute).
+  - `pipeline/crawlState.ts`: `getCursors` (one query up front) + `saveCursor`
+    (upsert, accumulates `totalSeen`).
+  - `pipeline/ingest.ts`: loads cursors, resumes each region from its saved page
+    (re-fetches the last page to catch growth, then continues), persists updated
+    cursors after the store; `--full` ignores cursors. `cli`: `collect --full`;
+    `stats` lists crawl cursors.
+- **Verified:** `npm test` 90/90 green (was 89; paginate resume coverage);
+  `npm run build` clean. Smoke: directory budapest run1 from page 1 (5 created,
+  cursor→page 2); run2 resumes from page 2 (fetched only 2, no page-1 re-scan);
+  `--full` re-scans (fetched 5); multi-region budapest,pest resumes each
+  independently; overpass (non-paginated) creates no cursor.
+- **Next step (Phase 2):** a light dependency-free HTML parser (extract
+  business cards from listing HTML) as a second parser shape behind the same
+  paginated connector pattern; or per-host concurrency in the fetcher for
+  many-domain page crawls.
 
 ### 2026-06-14 — run 9 (Phase 2: paginated directory connector)
 

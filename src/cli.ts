@@ -62,12 +62,14 @@ async function cmdCollect(flags: Flags): Promise<void> {
   const source = str(flags, "source") ?? "overpass";
   const regionIds = resolveRegions(str(flags, "region"));
   const live = flags.live === true;
+  const full = flags.full === true;
   const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
 
   const label = regionIds.length === 1 ? regionIds[0] : `${regionIds.length} regions`;
-  console.log(`Collecting from "${source}" for ${label} (${live ? "LIVE" : "fixture"})…`);
+  const mode = `${live ? "LIVE" : "fixture"}${full ? ", full re-scan" : ", resume"}`;
+  console.log(`Collecting from "${source}" for ${label} (${mode})…`);
   const start = Date.now();
-  const stats = await ingest({ source, regionIds, live, limit });
+  const stats = await ingest({ source, regionIds, live, limit, full });
   const secs = ((Date.now() - start) / 1000).toFixed(1);
   console.log(
     `Done in ${secs}s: fetched ${stats.fetched}, created ${stats.created}, ` +
@@ -136,6 +138,14 @@ async function cmdStats(): Promise<void> {
   for (const cat of CATEGORIES) {
     const c = counts.get(cat.id) ?? 0;
     if (c > 0) console.log(`  ${cat.name}: ${c}`);
+  }
+
+  const cursors = await db.crawlState.findMany({ orderBy: [{ source: "asc" }, { regionId: "asc" }] });
+  if (cursors.length) {
+    console.log("\nCrawl cursors (resume points):");
+    for (const c of cursors) {
+      console.log(`  ${c.source}/${c.regionId}: page ${c.lastPage} (${c.totalSeen} seen)`);
+    }
   }
 }
 
@@ -248,7 +258,7 @@ function help(): void {
   console.log(`lead-discovery CLI
 
 Commands:
-  collect --source <id> --region <id|a,b|all> [--live] [--limit N]
+  collect --source <id> --region <id|a,b|all> [--live] [--full] [--limit N]
   list    [--region <id>] [--category <id>] [--min-quality N] [--limit N]
   stats
   suppress <email|domain> [--kind EMAIL|DOMAIN] [--reason <text>]

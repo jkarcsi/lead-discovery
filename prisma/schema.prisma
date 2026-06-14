@@ -43,6 +43,19 @@ model Lead {
   @@index([reviewStatus])
 }
 
+// Resumable/incremental crawl cursor per (source, region): the highest page
+// that returned results, so a re-run continues instead of re-scanning page 1.
+model CrawlState {
+  id        String   @id @default(cuid())
+  source    String
+  regionId  String
+  lastPage  Int      @default(0)
+  totalSeen Int      @default(0)
+  lastRunAt DateTime @default(now())
+
+  @@unique([source, regionId])
+}
+
 // Global do-not-contact list. Checked before every outreach send; opt-out and
 // hard bounces add to it permanently.
 model Suppression {

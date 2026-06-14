@@ -13,7 +13,7 @@ import { politeGet } from "../lib/fetcher.js";
 import { collectPages } from "../lib/paginate.js";
 import { parseDirectoryPage, type DirectoryContext, type DirectoryPage } from "../lib/directoryParse.js";
 import type { RawBusiness } from "../types.js";
-import type { CollectOptions, Connector } from "./types.js";
+import type { CollectOptions, CollectResult, Connector } from "./types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const LICENSE = "directory (public listing)";
@@ -25,7 +25,7 @@ function fixturePath(regionId: string, page: number): string {
 export const directoryConnector: Connector = {
   id: "directory",
   license: LICENSE,
-  async collect({ regionId, live, limit }: CollectOptions): Promise<RawBusiness[]> {
+  async collect({ regionId, live, limit, startPage }: CollectOptions): Promise<CollectResult> {
     const ctx: DirectoryContext = { baseUrl: config.directoryUrl, license: LICENSE };
 
     const fetchPage = async (page: number): Promise<RawBusiness[]> => {
@@ -41,10 +41,12 @@ export const directoryConnector: Connector = {
       return parseDirectoryPage(json, ctx);
     };
 
-    const records = await collectPages(fetchPage, {
+    const { items, lastPage } = await collectPages(fetchPage, {
       window: config.fetchConcurrency,
       maxPages: config.directoryMaxPages,
+      startPage: startPage && startPage > 0 ? startPage : 1,
     });
-    return typeof limit === "number" ? records.slice(0, limit) : records;
+    const records = typeof limit === "number" ? items.slice(0, limit) : items;
+    return { records, cursor: { lastPage } };
   },
 };

@@ -5,13 +5,19 @@
 
 import { mapWithConcurrency } from "./concurrency.js";
 
+// `items` plus `lastPage`: the highest page that returned results (or
+// startPage-1 if none did) — the resumable crawl cursor.
+export type PageHarvest<T> = { items: T[]; lastPage: number };
+
 export async function collectPages<T>(
   fetchPage: (page: number) => Promise<T[]>,
   opts: { window: number; maxPages: number; startPage?: number },
-): Promise<T[]> {
+): Promise<PageHarvest<T>> {
   const out: T[] = [];
   const window = Math.max(1, opts.window);
-  let page = opts.startPage ?? 1;
+  const start = opts.startPage ?? 1;
+  let page = start;
+  let lastPage = start - 1;
 
   while (page <= opts.maxPages) {
     const end = Math.min(page + window - 1, opts.maxPages);
@@ -22,16 +28,17 @@ export async function collectPages<T>(
 
     // An empty page marks the end; everything after it in this window is end too.
     let reachedEnd = false;
-    for (const batch of batches) {
-      if (batch.length === 0) {
+    for (let i = 0; i < batches.length; i++) {
+      if (batches[i].length === 0) {
         reachedEnd = true;
         break;
       }
-      out.push(...batch);
+      out.push(...batches[i]);
+      lastPage = pageNumbers[i];
     }
     if (reachedEnd) break;
     page = end + 1;
   }
 
-  return out;
+  return { items: out, lastPage };
 }

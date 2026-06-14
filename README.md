@@ -26,6 +26,8 @@ minimize wasted round-trips, and keep crawls resilient and idempotent. See
   failing region/source never aborts the batch (`failedRegions` is reported).
 - **Idempotent.** Re-running merges on the dedupe key (VAT → domain →
   name+region) rather than duplicating.
+- **Incremental.** Paginated sources persist a per-(source, region) cursor and
+  resume from it, so a re-run fetches only new pages (`--full` to re-scan).
 
 ## Status
 
