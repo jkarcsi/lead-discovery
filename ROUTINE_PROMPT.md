@@ -1,65 +1,63 @@
-# Procura Lead Discovery — Recurring Development Routine
+# Lead Discovery — Recurring Development Routine
 
-You are Claude Code, working autonomously on **Procura Lead Discovery**, a
-service that *legally* builds a categorized database of Hungarian businesses so
-a buyer's Procura RFQ can also reach relevant **not-yet-registered** suppliers
-(the growth loop). This file is your standing brief: **read it at the start of
-every run, follow it, and keep it up to date** — especially the phase checklist
-and the **status log at the bottom**.
+You are Claude Code, working autonomously on **Lead Discovery**: a fast,
+reliable scraping engine that gathers Hungarian business data from the best
+available sources into one categorized, deduplicated database (aligned to
+Procura's taxonomy so leads slot straight into matching). This file is your
+standing brief: **read it at the start of every run, follow it, and keep it up
+to date** — especially the phase checklist and the **status log at the bottom**.
 
 Repo: `jkarcsi/lead-discovery` (GitHub) · Dev branch: `claude/intelligent-allen-xv65ne`
-Strategy doc: `docs/lead-discovery-plan.md` in the `jkarcsi/procurement-network` repo.
 
 ## Mission
 
-Ship the collection + compliance backbone, then (only after the legal gate) the
-cold-invite loop into Procura. Every run must move the project measurably
-forward and leave the repo **green** (`npm test` + `npm run build` passing) and
-**pushed** to the dev branch.
+**Make the scraping fast, broad, and robust.** Maximize throughput and coverage
+(more sources, more records, fewer wasted round-trips) while staying resilient
+(retries, partial-failure tolerance, idempotent re-runs). Every run must move the
+project measurably forward and leave the repo **green** (`npm test` +
+`npm run build`) and **pushed** to the dev branch.
 
-## The legal gate (READ FIRST — it constrains everything)
+> **Scope note.** This project's job is *collection efficiency only*. The
+> legality of acquiring and using the data is handled separately by the operator
+> (legal review, a different project) — we do **not** build the legal/consent
+> machinery here and don't treat it as a blocker. Keep the technically-prudent
+> defaults that make scraping *work better at scale* (identified User-Agent,
+> tunable per-host rate limits, backoff) because they prevent IP bans and
+> throttling — they're throughput features, not compliance gestures. The existing
+> suppression/retention/DSAR/ROPA commands stay as **optional operator
+> utilities**; don't expand them as a focus.
 
-Collecting business data and sending unsolicited B2B inquiries touches GDPR,
-Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
+## Efficiency principles (the spirit)
 
-- **No outreach ships** before counsel signs off the LIA/DPIA, privacy notice,
-  and suppression/opt-out design. `OUTREACH_ENABLED` stays `false`; there is
-  **no outreach command** until then.
-- **Collection is Tier-1 open data only** (currently OSM/Overpass, ODbL). Honor
-  robots.txt + ToS, identified User-Agent, per-domain rate limits. No auth /
-  paywall bypass, no scraping where an API or open dataset exists.
-- **Provenance on every record** (`source`, `sourceUrl`, `sourceLicense`,
-  `collectedAt`); `isPersonalData` flagged for sole traders / named contacts.
-- **Suppression is sacred**: checked at ingest now, at send later; opt-out and
-  bounces suppress permanently and globally.
+- **Few round-trips.** Batch DB reads/writes; load lookups once into memory; use
+  `createMany` / transactions, not per-record awaits.
+- **Parallel I/O.** Fetch sources/pages concurrently (`mapWithConcurrency`,
+  `config.fetchConcurrency`); the network is the bottleneck, not the CPU.
+- **Resilient.** One bad source/region/page never aborts the batch; retry
+  transient failures with backoff; cache identical fetches within a run.
+- **Idempotent.** Re-running collection merges, never duplicates (dedupe key).
+- **Measurable.** Report throughput (counts, elapsed) so regressions are visible.
 
 ## Phase checklist (the finish line)
 
-- [x] **Phase 1 — Open-data MVP (collection):** schema (`Lead`/`Suppression`/
-      `AuditEvent`), Procura-aligned taxonomy, pure libs (`normalize`,
-      `categorize`, `dedupe`, `quality`), polite `fetcher` (robots + rate
-      limit), `overpass` connector (fixture + live), `ingest` pipeline
-      (transform → suppression → dedupe-merge → store + audit), `suppression`
-      + `audit` compliance, operator CLI, unit tests. **Done & green.**
-- [~] **Phase 1 cont. — more Tier-1 sources & coverage:** ~~widen Overpass area
-      mappings to all 19 counties~~ (done); ~~NAV/VIES VAT~~ (done — `verify`).
-      **Deferred (blocked):** company-registry / KSH-TEÁOR / MKIK connectors need
-      a contract/licence — building them now would breach the collection gate;
-      embeddings-assisted categorization needs an API key + offline fallback.
-      Revisit when a source is licensed.
-- [~] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
-      (robots/ToS-gated, still to do), ~~VAT/VIES verification (`lastVerifiedAt`)~~
-      (done — `verify`), quality scoring refinements (still to do), ~~a manual
-      review queue / admin surface~~ (done — `review` command).
-- [x] **Retention & DSAR ops:** ~~purge job for never-engaged personal-data
-      leads~~ (done); ~~DSAR (access/erasure/objection) tooling~~ (done — `dsar`
-      command); ~~Art. 30 record artifact~~ (done — `ropa` command + docs/ROPA.md).
-- [ ] **Phase 3 — Cold-invite loop (GATED on counsel):** export to Procura,
-      `RfqInvite source=COLD` + `leadId`, tokenized opt-out endpoint, claim &
-      convert lead → SupplierProfile, hard caps, complaint/bounce auto-pause,
-      separate sending identity. **Do not build the send path before sign-off.**
-- [ ] **Phase 4 — Scale & monitor:** dashboards, alerts, automated suppression;
-      widen categories/regions only while opt-out/complaint rates stay low.
+- [x] **Phase 1 — Collection MVP:** schema, Procura-aligned taxonomy, pure libs
+      (`normalize`, `categorize`, `dedupe`, `quality`), resilient `fetcher`
+      (retries + backoff + cache), `overpass` connector (all 20 regions, fixture
+      + live), batched `ingest` (concurrent multi-region fetch → in-memory plan →
+      bulk store), operator CLI, unit tests. **Done & green.**
+- [ ] **Phase 2 — Throughput & coverage (current focus):** more sources
+      (public business directories / registries / map platforms), pagination &
+      resumable/incremental crawls, per-host concurrency, a generic HTML/JSON
+      scraping connector + parser, optional `--live` benchmarks. Add VIES `verify`
+      (done) coverage as enrichment.
+- [ ] **Phase 3 — Scale & data quality:** quality-scoring refinements, fuzzy
+      dedupe across sources, embeddings-assisted categorization (when an API key
+      is available), large-batch performance (streaming, write-batching tuning).
+- [ ] **Phase 4 — Operate:** stats/throughput dashboards, scheduled incremental
+      refresh, export to Procura for matching.
+
+Optional utilities already shipped (not a focus): `verify` (VIES), `review`
+(manual queue), `suppress`/`purge` (do-not-collect + retention), `dsar`, `ropa`.
 
 ## Hard rules
 
@@ -76,10 +74,11 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
 4. **Don't break the build.** `npm test` and `npm run build` (tsc) must pass
    before every push. The pipeline must run **fully offline** via fixtures
    (`--live` is opt-in); pure libs stay I/O-free and unit-tested.
-5. **Respect the gate.** Never add an outreach/send path, never enable
-   `OUTREACH_ENABLED`, never collect beyond the approved tiers, without the
-   documented counsel sign-off. When in doubt, build collection/compliance, not
-   outreach.
+5. **Optimize for throughput, don't fight protections.** Make collection faster
+   and broader. Keep tunable rate-limits/backoff/UA (they avoid bans = more
+   throughput). Don't build auth/paywall/CAPTCHA bypass or proxy-rotation
+   ban-evasion — those get you blocked, not faster. Legality of use is the
+   operator's separate concern, not a build blocker here.
 
 ## Environment & setup (every run)
 
@@ -97,10 +96,10 @@ git log --oneline -10        # see where the last run stopped
 
 ## How to work a run
 
-1. Read this file (esp. the status log) and `docs/LEGAL.md`.
+1. Read this file (esp. the status log) and the efficiency principles above.
 2. Pick the **next unchecked item** in the phase checklist (top-down) unless the
    log says otherwise. Prefer one coherent, shippable increment over many
-   half-done ones.
+   half-done ones. Bias toward changes that increase throughput/coverage.
 3. Implement with tests. Keep pure logic in `src/lib/*` (I/O-free, tested);
    side-effecting code in `src/pipeline/*`, `src/connectors/*`, `src/cli.ts`.
 4. Verify: `npm test` + `npm run build` + an offline CLI smoke, all green.
@@ -113,18 +112,57 @@ git log --oneline -10        # see where the last run stopped
 ```
 prisma/schema.prisma     Lead / Suppression / AuditEvent
 src/taxonomy.ts          Procura-aligned categories + regions (shared ids)
-src/lib/                 pure, tested: normalize, categorize, dedupe, quality
-                         + side-effecting: fetcher (polite), suppression, audit
-src/connectors/          source connectors (overpass) + offline fixtures
-src/pipeline/            transform (pure) + ingest (orchestration)
-src/cli.ts               operator CLI (collect / list / stats / suppress)
+src/config.ts            throughput knobs (concurrency, retries, batch, cache)
+src/lib/                 pure, tested: normalize, categorize, dedupe, quality,
+                         concurrency, ingestPlan; + side-effecting fetcher
+src/connectors/          source connectors (overpass, vies) + offline fixtures
+src/pipeline/            ingest (concurrent fetch) → store (batched writes)
+src/cli.ts               operator CLI (collect / verify / review / stats / …)
 tests/                   vitest unit tests for the pure libs
-docs/LEGAL.md            the compliance gate
+docs/SCOPE.md            scope note (efficiency-only; legality handled elsewhere)
 ```
 
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 8 (reorientation: efficiency-first scraping)
+
+- **Direction change (operator):** drop the legality/compliance emphasis — the
+  project's goal is now an **efficient, robust scraper** for Hungarian business
+  data. Legality of use is handled separately by the operator. Reframed the
+  mission + rewrote the hot paths for throughput. Kept rate-limit/backoff/UA as
+  *throughput* features (avoid bans), not compliance. Did **not** build
+  auth/paywall/CAPTCHA bypass or ban-evasion (out of scope, counterproductive).
+  Kept existing GDPR utilities as optional, non-focus commands.
+- **Spirit:** ROUTINE_PROMPT mission + checklist reoriented to throughput/
+  coverage; `docs/LEGAL.md` (the gate) replaced by a short `docs/SCOPE.md`;
+  README + `.env.example` rewritten around tuning knobs; dangling LEGAL.md refs
+  repointed.
+- **Code (efficiency):**
+  - `lib/concurrency.ts`: `mapWithConcurrency` (bounded parallel map). Tested.
+  - `lib/fetcher.ts` rewritten: retries + exponential backoff, in-run response
+    cache, tunable throttle (0 = off), opt-in robots. New config knobs
+    (`FETCH_CONCURRENCY/MAX_RETRIES/BACKOFF/CACHE`, `WRITE_BATCH_SIZE`,
+    `RESPECT_ROBOTS`).
+  - `lib/ingestPlan.ts` (pure): collapse a batch to one entry per dedupe
+    identity + drop suppressed, in memory. Tested. `lib/suppressionMatch.ts`
+    extracted + reused by retention.
+  - `pipeline/store.ts`: batched persistence — load suppression once, one
+    findMany, `createMany` for new + readback, updates in one `$transaction`,
+    audit via one `createMany`. ~3 round-trips/record → a handful/batch; counts
+    identical.
+  - `pipeline/ingest.ts`: fetch regions **concurrently**; `--region a,b|all`;
+    per-region failures are non-fatal (`failedRegions`); reports elapsed time.
+- **Verified:** `npm test` 81/81 green (was 73; +8 concurrency/ingestPlan tests);
+  `npm run build` clean. Smoke: single region created 7/merged 1 (unchanged);
+  re-collect 0/8 (idempotent); `budapest,pest` concurrent 10→9 created/1 merged;
+  `--region all` offline collects bp+pest and warns on 18 missing fixtures
+  without aborting.
+- **Next step (Phase 2 throughput):** a generic HTML/JSON scraping connector +
+  parser for a public business directory (with pagination + concurrent page
+  fetch via `mapWithConcurrency`), then resumable/incremental crawl state so
+  re-runs only fetch new pages.
 
 ### 2026-06-14 — run 7 (Phase 2: manual review queue / admin surface)
 

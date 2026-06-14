@@ -1,5 +1,5 @@
-// Operator CLI for the lead-discovery service. Phase-1 commands only collect,
-// inspect, and manage suppression — there is no outreach command (gated phase).
+// Operator CLI for the lead-discovery service: collect, verify, review, and
+// inspect the lead database, plus optional utilities (suppress/purge/dsar/ropa).
 //
 //   npm run cli -- collect --source overpass --region budapest
 //   npm run cli -- collect --source overpass --region budapest --live --limit 100
@@ -50,19 +50,32 @@ function str(flags: Flags, key: string): string | undefined {
   return typeof v === "string" ? v : undefined;
 }
 
+// --region accepts a single id, a comma-separated list, or "all" (every region
+// in the taxonomy). Regions are fetched concurrently.
+function resolveRegions(spec: string | undefined): string[] {
+  if (!spec) throw new Error('--region is required (e.g. --region budapest, --region all)');
+  if (spec === "all") return REGIONS.map((r) => r.id);
+  return spec.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 async function cmdCollect(flags: Flags): Promise<void> {
   const source = str(flags, "source") ?? "overpass";
-  const regionId = str(flags, "region");
-  if (!regionId) throw new Error("--region is required (e.g. --region budapest)");
+  const regionIds = resolveRegions(str(flags, "region"));
   const live = flags.live === true;
   const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
 
-  console.log(`Collecting from "${source}" for region "${regionId}" (${live ? "LIVE" : "fixture"})…`);
-  const stats = await ingest({ source, regionId, live, limit });
+  const label = regionIds.length === 1 ? regionIds[0] : `${regionIds.length} regions`;
+  console.log(`Collecting from "${source}" for ${label} (${live ? "LIVE" : "fixture"})…`);
+  const start = Date.now();
+  const stats = await ingest({ source, regionIds, live, limit });
+  const secs = ((Date.now() - start) / 1000).toFixed(1);
   console.log(
-    `Done: fetched ${stats.fetched}, created ${stats.created}, merged ${stats.merged}, ` +
-      `skipped (suppressed) ${stats.skippedSuppressed}.`,
+    `Done in ${secs}s: fetched ${stats.fetched}, created ${stats.created}, ` +
+      `merged ${stats.merged}, skipped (suppressed) ${stats.skippedSuppressed}.`,
   );
+  if (stats.failedRegions.length) {
+    console.log(`  (${stats.failedRegions.length} region(s) failed: ${stats.failedRegions.join(", ")})`);
+  }
 }
 
 async function cmdList(flags: Flags): Promise<void> {
@@ -235,7 +248,7 @@ function help(): void {
   console.log(`lead-discovery CLI
 
 Commands:
-  collect --source <id> --region <id> [--live] [--limit N]
+  collect --source <id> --region <id|a,b|all> [--live] [--limit N]
   list    [--region <id>] [--category <id>] [--min-quality N] [--limit N]
   stats
   suppress <email|domain> [--kind EMAIL|DOMAIN] [--reason <text>]

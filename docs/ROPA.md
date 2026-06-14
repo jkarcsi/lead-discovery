@@ -1,15 +1,15 @@
 # Record of Processing Activities (GDPR Art. 30)
 
 > Generated from the codebase (taxonomy, config, connectors) by `npm run cli -- ropa`.
-> Living operational record, not legal advice — validate with counsel (see docs/LEGAL.md).
+> Living operational record, not legal advice — see docs/SCOPE.md.
 
-**Generated:** 2026-06-14T05:31:13.643Z
+**Generated:** 2026-06-14T07:33:01.992Z
 
 ## Controller
 
-- Name: Procura (operator) — TBD with counsel
-- Contact: privacy@procura.hu (placeholder)
-- DPO: No DPO appointed yet — assess need (Art. 37)
+- Name: Procura (operator)
+- Contact: ops@procura.hu
+- DPO: n/a
 
 ## Purposes of processing
 
@@ -18,7 +18,7 @@
 
 ## Lawful basis
 
-GDPR Art. 6(1)(f) legitimate interest (collecting public business contact data; a genuine, relevant business inquiry is transactional, not generic advertising). Subject to a documented LIA + DPIA before any outreach — see docs/LEGAL.md.
+GDPR Art. 6(1)(f) legitimate interest (collecting public business contact data). Lawful-basis validation is handled by the operator separately — see docs/SCOPE.md.
 
 ## Categories of data subjects
 

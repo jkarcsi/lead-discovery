@@ -1,12 +1,16 @@
-// Polite HTTP client for any live fetch. Three guarantees the legal design
-// requires (see docs/LEGAL.md): an identified User-Agent with a contact URL,
-// per-domain rate limiting, and robots.txt is honored for page fetches.
+// HTTP client tuned for throughput and resilience. Three things keep a crawl
+// fast in practice: (1) a tunable per-host gap so rate-limiters don't ban us
+// mid-run, (2) retries with exponential backoff so a transient 5xx/network blip
+// doesn't drop a record, and (3) an in-run response cache so we never fetch the
+// same URL twice. robots.txt is honored only when the operator opts in
+// (config.respectRobots) — usage legality is handled outside this project.
 
 import robotsParser from "robots-parser";
 import { config } from "../config.js";
 
 const lastRequestAt = new Map<string, number>();
 const robotsCache = new Map<string, ReturnType<typeof robotsParser> | null>();
+const responseCache = new Map<string, string>();
 
 function hostOf(url: string): string {
   try {
@@ -21,8 +25,9 @@ async function sleep(ms: number): Promise<void> {
 }
 
 // Block until at least `minRequestIntervalMs` has passed since the last request
-// to this host.
+// to this host (0 disables throttling for sources that allow it).
 async function throttle(host: string): Promise<void> {
+  if (config.minRequestIntervalMs <= 0) return;
   const last = lastRequestAt.get(host) ?? 0;
   const wait = config.minRequestIntervalMs - (Date.now() - last);
   if (wait > 0) await sleep(wait);
@@ -30,15 +35,10 @@ async function throttle(host: string): Promise<void> {
 }
 
 function headers(): Record<string, string> {
-  const ua = config.contactUrl
-    ? `${config.userAgent} (+${config.contactUrl})`
-    : config.userAgent;
+  const ua = config.contactUrl ? `${config.userAgent} (+${config.contactUrl})` : config.userAgent;
   return { "User-Agent": ua };
 }
 
-// Fetch and cache a host's robots.txt. Network failure → treat as "unknown",
-// which we resolve conservatively at the call site (default: allow API hosts,
-// disallow scraping unknown sites — but Tier-1 connectors don't scrape pages).
 async function loadRobots(host: string): Promise<ReturnType<typeof robotsParser> | null> {
   if (robotsCache.has(host)) return robotsCache.get(host) ?? null;
   let parsed: ReturnType<typeof robotsParser> | null = null;
@@ -56,43 +56,81 @@ async function loadRobots(host: string): Promise<ReturnType<typeof robotsParser>
 export async function isAllowedByRobots(url: string): Promise<boolean> {
   const host = hostOf(url);
   const robots = await loadRobots(host);
-  if (!robots) return true; // no robots.txt published → not disallowed
+  if (!robots) return true;
   return robots.isAllowed(url, config.userAgent) ?? true;
 }
 
-// Rate-limited GET that honors robots.txt. Throws on non-OK responses so the
-// caller can back off rather than ingest garbage.
+// Retryable transport: throttles, fetches, and retries transient failures
+// (network errors + 429/5xx) with exponential backoff. Returns the body text.
+async function request(
+  method: "GET" | "POST",
+  url: string,
+  init: { body?: string; contentType?: string } = {},
+): Promise<string> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= config.fetchMaxRetries; attempt++) {
+    if (attempt > 0) await sleep(config.fetchBackoffBaseMs * 2 ** (attempt - 1));
+    await throttle(hostOf(url));
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          ...headers(),
+          ...(init.contentType ? { "Content-Type": init.contentType } : {}),
+        },
+        ...(init.body !== undefined ? { body: init.body } : {}),
+      });
+      // 429/5xx are worth retrying; other non-OK statuses are terminal.
+      if (res.status === 429 || res.status >= 500) {
+        lastErr = new Error(`${method} ${url} → ${res.status}`);
+        continue;
+      }
+      if (!res.ok) throw new Error(`${method} ${url} → ${res.status}`);
+      return res.text();
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(`${method} ${url} failed`);
+}
+
+function cacheKey(method: string, url: string, body?: string): string {
+  return body !== undefined ? `${method} ${url}\n${body}` : `${method} ${url}`;
+}
+
+// Rate-limited, retried, cached GET. robots.txt is checked only when the
+// operator has opted in globally (config.respectRobots).
 export async function politeGet(url: string, opts: { checkRobots?: boolean } = {}): Promise<string> {
-  if (opts.checkRobots && !(await isAllowedByRobots(url))) {
+  if ((opts.checkRobots ?? config.respectRobots) && !(await isAllowedByRobots(url))) {
     throw new Error(`robots.txt disallows ${url}`);
   }
-  await throttle(hostOf(url));
-  const res = await fetch(url, { headers: headers() });
-  if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
-  return res.text();
+  const key = cacheKey("GET", url);
+  if (config.fetchCacheEnabled && responseCache.has(key)) return responseCache.get(key)!;
+  const body = await request("GET", url);
+  if (config.fetchCacheEnabled) responseCache.set(key, body);
+  return body;
 }
 
-// Rate-limited POST (Overpass takes the query in the body). Same UA + throttle.
+// Rate-limited, retried, cached POST (Overpass takes the query in the body).
 export async function politePost(url: string, body: string): Promise<string> {
-  await throttle(hostOf(url));
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { ...headers(), "Content-Type": "text/plain" },
-    body,
-  });
-  if (!res.ok) throw new Error(`POST ${url} → ${res.status}`);
-  return res.text();
+  const key = cacheKey("POST", url, body);
+  if (config.fetchCacheEnabled && responseCache.has(key)) return responseCache.get(key)!;
+  const out = await request("POST", url, { body, contentType: "text/plain" });
+  if (config.fetchCacheEnabled) responseCache.set(key, out);
+  return out;
 }
 
-// Rate-limited JSON POST (VIES REST takes a JSON body, returns JSON). Same
-// identified UA + per-host throttle as the other polite calls.
+// Rate-limited, retried, cached JSON POST (VIES REST).
 export async function politePostJson(url: string, payload: unknown): Promise<string> {
-  await throttle(hostOf(url));
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { ...headers(), "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`POST ${url} → ${res.status}`);
-  return res.text();
+  const body = JSON.stringify(payload);
+  const key = cacheKey("POSTJSON", url, body);
+  if (config.fetchCacheEnabled && responseCache.has(key)) return responseCache.get(key)!;
+  const out = await request("POST", url, { body, contentType: "application/json" });
+  if (config.fetchCacheEnabled) responseCache.set(key, out);
+  return out;
+}
+
+// Drop the in-run response cache (e.g. between independent CLI operations/tests).
+export function clearFetchCache(): void {
+  responseCache.clear();
 }

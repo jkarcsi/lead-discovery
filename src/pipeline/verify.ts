@@ -1,7 +1,7 @@
 // VAT verification / enrichment step. For each stored lead carrying a HU VAT
 // number, ask EU VIES whether it's registered; stamp `lastVerifiedAt`, fill a
 // missing address from the authoritative response, and leave a `VERIFIED` audit
-// row. No outreach — this is collection-side enrichment (see docs/LEGAL.md).
+// row. This is collection-side enrichment (see docs/SCOPE.md).
 //
 // By default only unverified leads (`lastVerifiedAt == null`) are checked;
 // `revalidate` re-checks everything (e.g. a periodic re-verification sweep).

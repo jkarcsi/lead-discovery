@@ -1,5 +1,5 @@
 // DSAR operations: the data-subject rights the legal design requires before any
-// send (see docs/LEGAL.md). A subject is identified by their (normalized) email.
+// (see docs/SCOPE.md). A subject is identified by their (normalized) email.
 //
 //   export — Art. 15 access / Art. 20 portability: a full copy of what we hold.
 //   erase  — Art. 17 erasure + Art. 21 objection: delete the subject's leads and

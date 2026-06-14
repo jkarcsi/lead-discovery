@@ -1,45 +1,48 @@
-# Procura Lead Discovery
+# Lead Discovery
 
-A service that **legally** builds a database of Hungarian businesses,
-categorized by Procura's taxonomy (category × region), so a buyer's RFQ can
-also reach relevant **not-yet-registered** suppliers. Those suppliers can reply
-(one-click, optional registration) and join — the growth loop that expands the
-Procura network.
+A fast, reliable **scraping engine** that gathers Hungarian business data from
+the best available sources into one categorized, deduplicated database — keyed
+to Procura's taxonomy (category × region) so leads slot straight into matching.
 
-Plan & rationale: see `docs/LEGAL.md` here and the strategy doc in the main
-Procura repo (`docs/lead-discovery-plan.md`).
+The design goal is **collection efficiency**: maximize throughput and coverage,
+minimize wasted round-trips, and keep crawls resilient and idempotent. See
+[`docs/SCOPE.md`](docs/SCOPE.md).
 
-> ⚠️ **Legal gate.** No data is collected and **no outreach is sent** before
-> Hungarian data-protection counsel signs off the LIA/DPIA, privacy notice, and
-> suppression/opt-out design (see `docs/LEGAL.md`). The code is built so that
-> collection (Tier-1 open data) and outreach are separate, flag-gated phases.
+> **Scope.** This codebase does collection only. The legality of acquiring and
+> using the data is handled separately by the operator — it is not built here
+> and is not a blocker. Tunable rate-limits, backoff, and an identified
+> User-Agent are kept as *throughput* features (they avoid IP bans), not
+> compliance machinery.
+
+## How it's built for throughput
+
+- **Concurrent fetch.** Regions/sources are fetched in parallel
+  (`mapWithConcurrency`, `FETCH_CONCURRENCY`); the network is the bottleneck.
+- **Batched writes.** A whole batch is persisted in a few queries — load
+  suppression once, plan/dedupe in memory, one bulk `findMany`, `createMany` for
+  new leads, a single transaction for updates, one `createMany` for audit —
+  instead of ~3 round-trips per record.
+- **Resilient.** Retries with exponential backoff; an in-run response cache; one
+  failing region/source never aborts the batch (`failedRegions` is reported).
+- **Idempotent.** Re-running merges on the dedupe key (VAT → domain →
+  name+region) rather than duplicating.
 
 ## Status
 
-**Phase 1 (open-data collection MVP) is complete and green.** Implemented:
+**Phase 1 (collection MVP) is complete and green.**
 
 - Domain model (`prisma/schema.prisma`): `Lead`, `Suppression`, `AuditEvent`
 - Procura-aligned taxonomy (`src/taxonomy.ts`) — identical category/region ids
-- Pure libraries: `normalize`, `categorize` (+ region detection), `dedupe`
-  (VAT→domain→name key + merge), `quality` (0–100 score)
-- Polite `fetcher` (identified UA, per-domain rate limit, robots.txt honored)
-- Connectors: OSM Overpass (Tier-1, ODbL) with offline fixtures + live mode
-- VAT verification: EU VIES `verify` step (Tier-1) — confirms a lead's VAT is
-  registered, stamps `lastVerifiedAt`, fills a missing address, audits the check
-- Pipeline `ingest` (transform → suppression → dedupe-merge → store + audit)
-- Compliance: `suppression` (global do-not-contact, checked at ingest) + `audit`
-  + `retention` (erase now-suppressed and expired never-engaged personal-data
-  leads, with a detached audit trail)
-- Operator CLI: `collect` / `verify` / `review` (manual approve/reject queue) /
-  `list` / `stats` / `suppress` / `dsar` (access / erasure) / `ropa` (Art. 30
-  record) / `purge` (no outreach — gated)
-- Compliance artifacts: `docs/LEGAL.md` (the gate) + generated `docs/ROPA.md`
-- Connector coverage: all 19 counties + Budapest (Overpass area mappings derived
-  from the shared taxonomy)
-- Unit tests (vitest) for the pure libraries
+- Pure libs: `normalize`, `categorize`, `dedupe`, `quality`, `concurrency`,
+  `ingestPlan` (all I/O-free + unit-tested)
+- Resilient `fetcher` (retries + backoff + in-run cache, tunable throttle)
+- Connectors: OSM Overpass (all 20 regions, fixtures + live); EU VIES `verify`
+  enrichment (VAT check + address fill)
+- Pipeline: concurrent multi-region `ingest` → batched `store`
+- Operator CLI: `collect` / `verify` / `review` / `list` / `stats` / `suppress`
+  / `dsar` / `ropa` / `purge`
 
-Roadmap and run history: `ROUTINE_PROMPT.md`. **No outreach** is built or
-enabled — that phase is gated on counsel sign-off (`docs/LEGAL.md`).
+Roadmap and run history: `ROUTINE_PROMPT.md`.
 
 ## Quickstart
 
@@ -47,32 +50,34 @@ enabled — that phase is gated on counsel sign-off (`docs/LEGAL.md`).
 npm install
 cp .env.example .env
 npx prisma db push
-npm test                       # pure-library unit tests
-npm run cli -- collect --source overpass --region budapest   # dry-run (fixture)
-npm run cli -- collect --source overpass --region budapest --live   # real Overpass fetch
-npm run cli -- verify                                         # VAT-check leads (fixture)
-npm run cli -- verify --live                                  # real EU VIES lookups
+npm test
+npm run cli -- collect --source overpass --region budapest        # one region (fixture)
+npm run cli -- collect --source overpass --region budapest,pest   # several, concurrent
+npm run cli -- collect --source overpass --region all --live      # full-country live crawl
 npm run cli -- stats
-npm run cli -- purge --dry-run                                # preview retention erasures
 ```
 
 Without `--live`, the Overpass connector reads `src/connectors/fixtures/`, so
-the pipeline runs fully offline. `--live` hits the public Overpass API (ODbL;
-attribution required) and honors polite rate limits.
+the pipeline runs fully offline. `--live` hits the public Overpass API.
+
+## Tuning (env)
+
+`FETCH_CONCURRENCY` (parallel fetches), `MIN_REQUEST_INTERVAL_MS` (per-host gap,
+0 to disable), `FETCH_MAX_RETRIES` / `FETCH_BACKOFF_BASE_MS`, `FETCH_CACHE`,
+`WRITE_BATCH_SIZE`, `RESPECT_ROBOTS`. See `src/config.ts` and `.env.example`.
 
 ## Architecture
 
 ```
-sources → connectors → normalize → categorize → dedupe → Lead store (Postgres/SQLite)
-                                   compliance: suppression / audit / opt-out / retention
-                                   → export to Procura (cold invites, "claim profile")
+sources → connectors → normalize → categorize → dedupe (in-memory plan)
+        → batched store (createMany / txn) → Lead DB (SQLite dev / Postgres prod)
+        → export to Procura for matching
 ```
 
-Stack: Node + TypeScript + Prisma (SQLite in dev, Postgres in prod). The
-taxonomy and categorization mirror Procura so leads slot straight into its
-matching.
+Stack: Node + TypeScript + Prisma. The taxonomy and categorization mirror
+Procura so leads slot straight into its matching.
 
 ## License
 
-Proprietary — see `LICENSE`. OSM-derived data is ODbL and requires attribution
-(© OpenStreetMap contributors).
+Proprietary — see `LICENSE`. OSM-derived data is ODbL (© OpenStreetMap
+contributors).

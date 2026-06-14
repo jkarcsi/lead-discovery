@@ -1,99 +1,77 @@
-// The collection pipeline:
-//   connector → transform (normalize + categorize) → suppression check →
-//   dedupe-key upsert (merge on collision) → Lead store + audit trail.
-//
-// This is Phase-1 work: it only *collects and categorizes*. No outreach happens
-// anywhere here — that is a separate, counsel-gated phase (see docs/LEGAL.md).
+// The collection pipeline: connector → transform (normalize + categorize) →
+// batched store (dedupe-merge + provenance). Tuned for throughput — multiple
+// regions are fetched in parallel (network-bound) and persisted in one batched
+// write (see store.ts).
 
-import { db } from "../db.js";
+import { config } from "../config.js";
 import { getConnector } from "../connectors/index.js";
+import { mapWithConcurrency } from "../lib/concurrency.js";
 import { transform } from "./transform.js";
-import { dedupeKey, mergeLead } from "../lib/dedupe.js";
-import { qualityScore } from "../lib/quality.js";
-import { isSuppressed, isDomainSuppressed } from "../lib/suppression.js";
-import { recordAudit } from "../lib/audit.js";
-import { leadInputFromRow } from "../lib/leadRow.js";
+import { storeLeads } from "./store.js";
 import type { LeadInput } from "../types.js";
 
 export type IngestOptions = {
   source: string;
-  regionId: string;
+  regionIds: string[];
   live: boolean;
   limit?: number;
 };
 
 export type IngestStats = {
   source: string;
-  regionId: string;
+  regions: string[];
   fetched: number;
   created: number;
   merged: number;
   skippedSuppressed: number;
+  failedRegions: string[];
 };
 
 function toLeadInput(raw: ReturnType<typeof transform>, fallbackRegion: string): LeadInput {
   return { ...raw, regionId: raw.regionId ?? fallbackRegion };
 }
 
+// Fetch + normalize one region's raw businesses (no DB work).
+async function collectRegion(
+  source: string,
+  regionId: string,
+  live: boolean,
+  limit?: number,
+): Promise<LeadInput[]> {
+  const connector = getConnector(source);
+  const raw = await connector.collect({ regionId, live, limit });
+  return raw.map((r) => toLeadInput(transform(r), regionId));
+}
+
 export async function ingest(opts: IngestOptions): Promise<IngestStats> {
-  const connector = getConnector(opts.source);
-  const raw = await connector.collect({
-    regionId: opts.regionId,
-    live: opts.live,
-    limit: opts.limit,
-  });
+  // Fetch all regions concurrently (the slow, network-bound part), then persist
+  // everything in a single batched write. One region failing (missing fixture,
+  // network blip) must not abort the whole crawl.
+  const failedRegions: string[] = [];
+  const perRegion = await mapWithConcurrency(
+    opts.regionIds,
+    config.fetchConcurrency,
+    async (regionId) => {
+      try {
+        return await collectRegion(opts.source, regionId, opts.live, opts.limit);
+      } catch (err) {
+        failedRegions.push(regionId);
+        console.warn(`  ! region "${regionId}" failed: ${err instanceof Error ? err.message : err}`);
+        return [] as LeadInput[];
+      }
+    },
+  );
+  const leads = perRegion.flat();
 
-  const stats: IngestStats = {
+  const store = await storeLeads(leads, opts.source);
+
+  return {
     source: opts.source,
-    regionId: opts.regionId,
-    fetched: raw.length,
-    created: 0,
-    merged: 0,
-    skippedSuppressed: 0,
+    regions: opts.regionIds,
+    fetched: leads.length,
+    created: store.created,
+    merged: store.merged,
+    skippedSuppressed: store.skippedSuppressed,
+    failedRegions,
   };
-
-  for (const r of raw) {
-    const lead = toLeadInput(transform(r), opts.regionId);
-
-    // Never (re)store contactable data for a suppressed business.
-    if ((await isSuppressed(lead.email)) || (await isDomainSuppressed(lead.domain))) {
-      stats.skippedSuppressed++;
-      await recordAudit(null, "SUPPRESSED_SKIP", { source: lead.source, domain: lead.domain });
-      continue;
-    }
-
-    const key = dedupeKey(lead);
-    const existing = await db.lead.findUnique({ where: { dedupeKey: key } });
-
-    if (existing) {
-      const merged = mergeLead(leadInputFromRow(existing), lead);
-      await db.lead.update({
-        where: { dedupeKey: key },
-        data: {
-          ...merged,
-          categories: JSON.stringify(merged.categories),
-          qualityScore: qualityScore(merged),
-        },
-      });
-      stats.merged++;
-      await recordAudit(existing.id, "MERGED", { source: lead.source });
-    } else {
-      const created = await db.lead.create({
-        data: {
-          ...lead,
-          dedupeKey: key,
-          categories: JSON.stringify(lead.categories),
-          qualityScore: qualityScore(lead),
-        },
-      });
-      stats.created++;
-      await recordAudit(created.id, "COLLECTED", {
-        source: lead.source,
-        sourceUrl: lead.sourceUrl,
-        license: lead.sourceLicense,
-      });
-    }
-  }
-
-  return stats;
 }

@@ -1,6 +1,6 @@
 // Global do-not-contact list. Checked before every outreach send AND at ingest
 // (so a suppressed business is never re-collected with contactable data). An
-// opt-out or hard bounce adds to it permanently. See docs/LEGAL.md.
+// opt-out or hard bounce adds to it permanently. See docs/SCOPE.md.
 
 import { db } from "../db.js";
 import { domainFromUrl } from "./normalize.js";

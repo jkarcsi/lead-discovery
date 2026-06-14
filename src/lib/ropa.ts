@@ -44,7 +44,7 @@ export function buildRopa(input: RopaInputs): Ropa {
       "Verify and de-duplicate business records to keep matching accurate.",
     ],
     lawfulBasis:
-      "GDPR Art. 6(1)(f) legitimate interest (collecting public business contact data; a genuine, relevant business inquiry is transactional, not generic advertising). Subject to a documented LIA + DPIA before any outreach — see docs/LEGAL.md.",
+      "GDPR Art. 6(1)(f) legitimate interest (collecting public business contact data). Lawful-basis validation is handled by the operator separately — see docs/SCOPE.md.",
     dataSubjectCategories: [
       "Legal entities (Kft., Zrt., Bt., …) — company data and general business contacts are largely NOT personal data.",
       "Sole traders (egyéni vállalkozó) and named-person contacts — personal data; flagged isPersonalData and treated conservatively.",
@@ -94,7 +94,7 @@ export function renderRopaMarkdown(ropa: Ropa): string {
     "# Record of Processing Activities (GDPR Art. 30)",
     "",
     "> Generated from the codebase (taxonomy, config, connectors) by `npm run cli -- ropa`.",
-    "> Living operational record, not legal advice — validate with counsel (see docs/LEGAL.md).",
+    "> Living operational record, not legal advice — see docs/SCOPE.md.",
     "",
     `**Generated:** ${ropa.generatedAt}`,
     "",

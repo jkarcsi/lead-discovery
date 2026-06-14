@@ -9,6 +9,8 @@
 //
 // The DB-touching application of this lives in `pipeline/purge.ts`.
 
+import { leadSuppressionKeys } from "./suppressionMatch.js";
+
 export type RetentionPolicy = {
   // Purge never-engaged personal-data leads older than this many days.
   personalDataRetentionDays: number;
@@ -25,16 +27,6 @@ export type RetentionLeadView = {
 export type PurgeReason = "SUPPRESSED" | "PERSONAL_DATA_EXPIRED";
 
 const DAY_MS = 86_400_000;
-
-// All do-not-contact values that identify this lead: its email, that email's
-// domain, and its website domain — normalized the same way Suppression stores
-// them (lowercased, trimmed).
-function leadSuppressionKeys(lead: RetentionLeadView): string[] {
-  const email = lead.email?.trim().toLowerCase() || null;
-  const emailDomain = email ? email.split("@")[1] ?? null : null;
-  const domain = lead.domain?.trim().toLowerCase() || null;
-  return [email, emailDomain, domain].filter((v): v is string => v !== null);
-}
 
 // Returns the reason this lead must be purged, or null to keep it. Suppression
 // takes precedence (it applies regardless of lead type or age).
