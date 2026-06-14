@@ -7,6 +7,7 @@ import { directoryConnector } from "./directory.js";
 import { htmlDirectoryConnector } from "./htmlDirectory.js";
 import { ebeszamoloConnector } from "./ebeszamolo.js";
 import { kozbeszerzesConnector } from "./kozbeszerzes.js";
+import { mkikConnector } from "./mkik.js";
 
 const REGISTRY: Record<string, Connector> = {
   [overpassConnector.id]: overpassConnector,
@@ -14,6 +15,7 @@ const REGISTRY: Record<string, Connector> = {
   [htmlDirectoryConnector.id]: htmlDirectoryConnector,
   [ebeszamoloConnector.id]: ebeszamoloConnector,
   [kozbeszerzesConnector.id]: kozbeszerzesConnector,
+  [mkikConnector.id]: mkikConnector,
 };
 
 export function getConnector(id: string): Connector {

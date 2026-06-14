@@ -44,7 +44,7 @@ merge across sources on the dedupe key (VAT → domain → name+region).
 | 4 | VIES (EU VAT) | VAT validation | ✅ `verify` step |
 | 5 | Közbeszerzés (EKR / TED) | Active-supplier proof | ✅ `kozbeszerzes` (CPV→taxonomy) |
 | 6 | KSH-TEÁOR | Classification reference | ✅ TEÁOR→taxonomy mapping |
-| 7 | MKIK chamber | Coverage cross-check | ◻ |
+| 7 | MKIK chamber | Coverage cross-check | ✅ `mkik` connector |
 | 8 | OpenCorporates | Aggregator / normalization | ◻ |
 | 9 | Google Places API | Contact enrichment (official API) | ◻ |
 | 10 | Website contact pages | Email / phone enrichment | ◻ `htmldir` scraper exists |
@@ -61,8 +61,8 @@ merge across sources on the dedupe key (VAT → domain → name+region).
   headcount, risk reasons). Remaining: a VIES batch driver / scheduling.
 - ✅ **M1c — Procurement signal:** `kozbeszerzes` connector (award winners =
   active suppliers) with CPV → taxonomy mapping.
-- 🟡 **M1d — Classification & cross-check:** ✅ TEÁOR→taxonomy mapping (registry
-  auto-categorization). Remaining: MKIK chamber connector, OpenCorporates dedupe.
+- 🟡 **M1d — Classification & cross-check:** ✅ TEÁOR→taxonomy mapping; ✅ MKIK
+  chamber connector (coverage cross-check). Remaining: OpenCorporates dedupe.
 - ◻ **M2 — Tier-2 enrichment:** Google Places (official API) + polite crawl;
   quality-scoring refinements.
 - ◻ **M2s — Sole traders (EVNY):** behind an explicit flag, built last.
@@ -134,6 +134,9 @@ docs/ROPA.md           generated processing record
 
 ### 2026-06-14
 
+- **M1d — coverage cross-check:** added the `mkik` chamber connector on the
+  paginated factory, reusing `parseCompanyRegistryPage` (no new parser). Confirms
+  companies by VAT against other sources and widens coverage. 6 connectors total.
 - **M1d — classification:** added `lib/teaor.ts` (TEÁOR'08 → taxonomy) and a
   shared `lib/prefixMap.ts` helper (CPV + TEÁOR both use it). The e-beszámoló
   registry now authoritatively categorizes companies from their TEÁOR code (e.g.
@@ -166,5 +169,5 @@ docs/ROPA.md           generated processing record
 
 ### Next
 
-M1d remainder — MKIK chamber connector (coverage cross-check) and OpenCorporates
-normalization/dedupe; then M2 Tier-2 enrichment.
+M1d remainder — OpenCorporates normalization/dedupe; then M2 Tier-2 enrichment
+(Google Places via official API, polite contact-page crawl, quality refinements).

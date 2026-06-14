@@ -1,0 +1,32 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "id": "BP-0001",
+      "companyName": "Tiszta Iroda Kft.",
+      "taxNumber": "HU10773381",
+      "seat": "1051 Budapest, Arany János utca 10.",
+      "teaorCode": "8121",
+      "teaorText": "Általános épülettakarítás"
+    },
+    {
+      "id": "BP-0002",
+      "companyName": "Dunakanyar Klímatechnika Kft.",
+      "seat": "1033 Budapest, Szentendrei út 12.",
+      "teaorCode": "4322",
+      "teaorText": "víz-, gáz-, fűtés-, légkondicionáló-szerelés",
+      "email": "info@dunakanyarklima.hu",
+      "phone": "+36 1 444 0099",
+      "website": "https://dunakanyarklima.hu"
+    },
+    {
+      "id": "BP-0003",
+      "companyName": "Centrum Munkavédelem Bt.",
+      "seat": "1064 Budapest, Izabella utca 3.",
+      "teaorText": "munkavédelem, kockázatértékelés, üzemorvosi szolgáltatás",
+      "email": "iroda@centrummunkaved.hu",
+      "phone": "+36 1 312 4567",
+      "website": "https://centrummunkaved.hu"
+    }
+  ]
+}

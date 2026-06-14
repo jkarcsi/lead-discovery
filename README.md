@@ -40,9 +40,9 @@ minimize wasted round-trips, and keep crawls resilient and idempotent. See
 - Resilient `fetcher` (retries + backoff + in-run cache, tunable throttle)
 - Connectors (a paginated-source factory makes adding more cheap): OSM Overpass
   (all 20 regions); company registry `ebeszamolo`; a JSON `directory`; an HTML
-  `htmldir`; public procurement `kozbeszerzes` (CPV→taxonomy); enrichment via
-  EU VIES `verify` and NAV `nav`. Overlapping businesses merge across sources on
-  the dedupe key.
+  `htmldir`; chamber registry `mkik`; public procurement `kozbeszerzes`
+  (CPV→taxonomy); enrichment via EU VIES `verify` and NAV `nav`. Overlapping
+  businesses merge across sources on the dedupe key.
 - Pipeline: concurrent multi-region `ingest` → batched `store`
 - Operator CLI: `collect` / `verify` (VIES) / `nav` (tax-status) / `review` /
   `list` / `stats` / `suppress` / `dsar` / `ropa` / `purge`
