@@ -31,12 +31,16 @@ model Lead {
   gdprBasis          String       @default("legitimate_interest")
   qualityScore       Int          @default(0)
   lifecycle          String       @default("NEW") // NEW | CONTACTED | RESPONDED | REGISTERED | SUPPRESSED
+  reviewStatus       String       @default("PENDING") // PENDING | APPROVED | REJECTED (human vetting)
+  reviewNote         String?
+  reviewedAt         DateTime?
   collectedAt        DateTime     @default(now())
   lastVerifiedAt     DateTime?
   auditEvents        AuditEvent[]
 
   @@index([regionId])
   @@index([lifecycle])
+  @@index([reviewStatus])
 }
 
 // Global do-not-contact list. Checked before every outreach send; opt-out and

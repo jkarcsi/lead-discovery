@@ -41,14 +41,16 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       limit), `overpass` connector (fixture + live), `ingest` pipeline
       (transform → suppression → dedupe-merge → store + audit), `suppression`
       + `audit` compliance, operator CLI, unit tests. **Done & green.**
-- [ ] **Phase 1 cont. — more Tier-1 sources & coverage:** ~~widen Overpass area
-      mappings to all 19 counties~~ (done — derived from taxonomy); add
-      company-registry / NAV-VIES / KSH-TEÁOR / MKIK connectors (ToS/licence
-      permitting); embeddings-assisted categorization.
-- [ ] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
-      (robots/ToS-gated), ~~VAT/VIES verification (`lastVerifiedAt`)~~ (done —
-      `verify` step), quality scoring refinements, a manual review queue / admin
-      surface.
+- [~] **Phase 1 cont. — more Tier-1 sources & coverage:** ~~widen Overpass area
+      mappings to all 19 counties~~ (done); ~~NAV/VIES VAT~~ (done — `verify`).
+      **Deferred (blocked):** company-registry / KSH-TEÁOR / MKIK connectors need
+      a contract/licence — building them now would breach the collection gate;
+      embeddings-assisted categorization needs an API key + offline fallback.
+      Revisit when a source is licensed.
+- [~] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
+      (robots/ToS-gated, still to do), ~~VAT/VIES verification (`lastVerifiedAt`)~~
+      (done — `verify`), quality scoring refinements (still to do), ~~a manual
+      review queue / admin surface~~ (done — `review` command).
 - [x] **Retention & DSAR ops:** ~~purge job for never-engaged personal-data
       leads~~ (done); ~~DSAR (access/erasure/objection) tooling~~ (done — `dsar`
       command); ~~Art. 30 record artifact~~ (done — `ropa` command + docs/ROPA.md).
@@ -123,6 +125,34 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 7 (Phase 2: manual review queue / admin surface)
+
+- **Context:** Phase 1 MVP + the whole compliance backbone are done. The two
+  open Phase-1-cont items are **blocked, not skipped**: more registry connectors
+  (e-cégjegyzék/KSH/MKIK) need a contract/licence (collection gate), and
+  embeddings categorization needs an API key + offline fallback. So moved to a
+  buildable **Phase 2** item per the operator's instruction.
+- **Shipped (green):**
+  - Schema: `Lead.reviewStatus` (PENDING|APPROVED|REJECTED) + `reviewNote` +
+    `reviewedAt` + index (db push, no data loss in dev).
+  - `lib/review.ts` (pure): `decisionToStatus`, `reviewReasons` (personal-data /
+    no-contact / uncategorized / low-quality triage flags), `queueComparator`
+    (quality desc, personal-data grouped last). Tested.
+  - `pipeline/review.ts`: `reviewQueue` (PENDING leads, region/category filters,
+    prioritized) and `setReview` (approve/reject + `REVIEWED` audit).
+  - `cli.ts`: `review queue|approve|reject`; `stats` now shows the
+    pending/approved/rejected breakdown. `audit.ts`: `REVIEWED` type.
+- **Verified:** `npm test` 73/73 green (was 63; +10 review tests);
+  `npm run build` clean. Offline smoke: collect → `review queue` lists 7 leads
+  prioritized, flags the low-quality bakery (no contact/uncategorized/low) and
+  the sole trader (personal data, sorted last); `review approve`/`reject` set
+  status + write `REVIEWED` audit with the note; `stats` shows
+  `5 pending, 1 approved, 1 rejected`.
+- **Next step (Phase 2):** quality-scoring refinements (e.g. weight VIES-verified
+  leads above checksum-only; factor review status), then Tier-2 public
+  contact-page enrichment (robots/ToS-gated, general inboxes only). Outreach
+  (Phase 3) stays gated on counsel.
 
 ### 2026-06-14 — run 6 (Art. 30 record-of-processing artifact)
 

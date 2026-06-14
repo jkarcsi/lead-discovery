@@ -12,6 +12,7 @@ export type AuditType =
   | "VERIFIED"
   | "REGISTERED"
   | "SUPPRESSED_SKIP"
+  | "REVIEWED"
   | "PURGED";
 
 export async function recordAudit(

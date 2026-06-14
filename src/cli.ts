@@ -14,6 +14,7 @@ import { ingest } from "./pipeline/ingest.js";
 import { purge } from "./pipeline/purge.js";
 import { verify } from "./pipeline/verify.js";
 import { dsarExport, dsarErase } from "./pipeline/dsar.js";
+import { reviewQueue, setReview } from "./pipeline/review.js";
 import { listConnectors, connectorSources } from "./connectors/index.js";
 import { VIES_LICENSE } from "./connectors/vies.js";
 import { addSuppression, type SuppressionKind } from "./lib/suppression.js";
@@ -100,7 +101,11 @@ async function cmdStats(): Promise<void> {
   const withEmail = await db.lead.count({ where: { email: { not: null } } });
   const personal = await db.lead.count({ where: { isPersonalData: true } });
   const suppressed = await db.suppression.count();
+  const pending = await db.lead.count({ where: { reviewStatus: "PENDING" } });
+  const approved = await db.lead.count({ where: { reviewStatus: "APPROVED" } });
+  const rejected = await db.lead.count({ where: { reviewStatus: "REJECTED" } });
   console.log(`Leads: ${total} (with email: ${withEmail}, personal-data: ${personal})`);
+  console.log(`Review: ${pending} pending, ${approved} approved, ${rejected} rejected`);
   console.log(`Suppression entries: ${suppressed}`);
 
   console.log("\nBy region:");
@@ -170,6 +175,39 @@ async function cmdDsar(positional: string[]): Promise<void> {
   }
 }
 
+async function cmdReview(positional: string[], flags: Flags): Promise<void> {
+  const action = positional[0] ?? "queue";
+  if (action === "queue") {
+    const items = await reviewQueue({
+      regionId: str(flags, "region"),
+      category: str(flags, "category"),
+      limit: str(flags, "limit") ? Number(str(flags, "limit")) : 50,
+    });
+    if (items.length === 0) {
+      console.log("Review queue is empty (no PENDING leads match).");
+      return;
+    }
+    console.log(`${items.length} lead(s) pending review:\n`);
+    for (const it of items) {
+      const cats = it.categories.join(", ") || "—";
+      const flag = it.reasons.length ? `  ⚠ ${it.reasons.join("; ")}` : "  ✓ ready";
+      console.log(
+        `[${String(it.qualityScore).padStart(3)}] ${it.id}  ${it.legalName} · ` +
+          `${it.regionId ?? "?"} · ${cats} · ${it.contact ?? "no contact"}\n${flag}`,
+      );
+    }
+    return;
+  }
+  if (action === "approve" || action === "reject") {
+    const leadId = positional[1];
+    if (!leadId) throw new Error(`usage: review ${action} <leadId> [--note <text>]`);
+    const res = await setReview(leadId, action, str(flags, "note"));
+    console.log(`${res.status}: ${res.legalName} (${res.id}).`);
+    return;
+  }
+  throw new Error(`Unknown review action "${action}". Use queue | approve | reject.`);
+}
+
 function cmdRopa(flags: Flags): void {
   const ropa = buildRopa({
     generatedAt: new Date(),
@@ -201,6 +239,8 @@ Commands:
   list    [--region <id>] [--category <id>] [--min-quality N] [--limit N]
   stats
   suppress <email|domain> [--kind EMAIL|DOMAIN] [--reason <text>]
+  review  queue [--region <id>] [--category <id>] [--limit N]
+  review  <approve|reject> <leadId> [--note <text>]
   verify  [--live] [--limit N] [--revalidate]  VAT-check leads against EU VIES
   dsar    <export|erase> <email>   data-subject access / erasure (GDPR)
   ropa    [--write]   print (or write docs/ROPA.md) the Art. 30 record
@@ -231,6 +271,9 @@ async function main(): Promise<void> {
       break;
     case "dsar":
       await cmdDsar(positional);
+      break;
+    case "review":
+      await cmdReview(positional, flags);
       break;
     case "ropa":
       cmdRopa(flags);
