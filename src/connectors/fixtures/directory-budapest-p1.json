@@ -1,0 +1,33 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "id": 1001,
+      "name": "Tiszta Iroda Kft.",
+      "email": "kapcsolat@tisztairoda.hu",
+      "phone": "+36 1 222 3344",
+      "website": "https://tisztairoda.hu",
+      "address": "1051 Budapest, Arany János utca 10.",
+      "vat": "HU10773381",
+      "activity": "irodatakarítás, takarítás, higiénia"
+    },
+    {
+      "id": 1002,
+      "name": "Pannon Klíma Szerviz Kft.",
+      "email": "info@pannonklima.hu",
+      "phone": "+36 1 333 4455",
+      "website": "https://pannonklima.hu",
+      "address": "1117 Budapest, Hűvös utca 4.",
+      "activity": "klíma karbantartás, hűtés, légkondicionálás"
+    },
+    {
+      "id": 1003,
+      "name": "DigitálIT Megoldások Bt.",
+      "email": "hello@digitalit.hu",
+      "phone": "+36 1 444 5566",
+      "website": "https://digitalit.hu",
+      "address": "1134 Budapest, Lehel utca 22.",
+      "activity": "informatikai rendszergazda support hálózat"
+    }
+  ]
+}

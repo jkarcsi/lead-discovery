@@ -36,8 +36,9 @@ minimize wasted round-trips, and keep crawls resilient and idempotent. See
 - Pure libs: `normalize`, `categorize`, `dedupe`, `quality`, `concurrency`,
   `ingestPlan` (all I/O-free + unit-tested)
 - Resilient `fetcher` (retries + backoff + in-run cache, tunable throttle)
-- Connectors: OSM Overpass (all 20 regions, fixtures + live); EU VIES `verify`
-  enrichment (VAT check + address fill)
+- Connectors: OSM Overpass (all 20 regions); a generic paginated JSON
+  `directory` connector (concurrent page fetch); EU VIES `verify` enrichment.
+  Overlapping businesses merge across sources on the dedupe key.
 - Pipeline: concurrent multi-region `ingest` → batched `store`
 - Operator CLI: `collect` / `verify` / `review` / `list` / `stats` / `suppress`
   / `dsar` / `ropa` / `purge`
@@ -51,9 +52,10 @@ npm install
 cp .env.example .env
 npx prisma db push
 npm test
-npm run cli -- collect --source overpass --region budapest        # one region (fixture)
-npm run cli -- collect --source overpass --region budapest,pest   # several, concurrent
-npm run cli -- collect --source overpass --region all --live      # full-country live crawl
+npm run cli -- collect --source overpass  --region budapest       # one region (fixture)
+npm run cli -- collect --source directory --region budapest       # paginated JSON source
+npm run cli -- collect --source overpass  --region budapest,pest  # several, concurrent
+npm run cli -- collect --source overpass  --region all --live     # full-country live crawl
 npm run cli -- stats
 ```
 

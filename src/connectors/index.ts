@@ -1,11 +1,13 @@
-// Connector registry. Add new Tier-1 sources (company registry, chamber data)
-// here as they pass legal review.
+// Connector registry. Add new sources here; each one widens coverage, and
+// overlapping businesses merge across sources on the dedupe key.
 
 import type { Connector } from "./types.js";
 import { overpassConnector } from "./overpass.js";
+import { directoryConnector } from "./directory.js";
 
 const REGISTRY: Record<string, Connector> = {
   [overpassConnector.id]: overpassConnector,
+  [directoryConnector.id]: directoryConnector,
 };
 
 export function getConnector(id: string): Connector {

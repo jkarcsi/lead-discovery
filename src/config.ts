@@ -5,6 +5,8 @@ export const config = {
   viesUrl:
     process.env.VIES_URL ||
     "https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number",
+  directoryUrl: process.env.DIRECTORY_URL || "https://example-directory.test/api",
+  directoryMaxPages: Number(process.env.DIRECTORY_MAX_PAGES || 50),
 
   // --- Throughput knobs (the whole point: collect fast and reliably) ---
   // Per-host minimum gap between requests. Tunable; the default keeps us under

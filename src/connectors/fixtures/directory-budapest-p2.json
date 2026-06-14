@@ -1,0 +1,23 @@
+{
+  "page": 2,
+  "results": [
+    {
+      "id": 1004,
+      "name": "VagyonŐr Biztonsági Zrt.",
+      "email": "iroda@vagyonor.hu",
+      "phone": "+36 1 555 6677",
+      "website": "https://vagyonor.hu",
+      "address": "1095 Budapest, Soroksári út 30.",
+      "activity": "vagyonvédelem, őrzés-védelem, portaszolgálat"
+    },
+    {
+      "id": 1005,
+      "name": "TűzVéd Mérnökiroda Kft.",
+      "email": "info@tuzved-mernok.hu",
+      "phone": "+36 1 666 7788",
+      "website": "https://tuzved-mernok.hu",
+      "address": "1149 Budapest, Egressy út 12.",
+      "activity": "tűzvédelem, tűzoltó készülék, tűzjelző"
+    }
+  ]
+}

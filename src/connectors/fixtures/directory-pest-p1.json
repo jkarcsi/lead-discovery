@@ -1,0 +1,23 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "id": 2001,
+      "name": "ZöldTakarítás Kft.",
+      "email": "info@zoldtakaritas.hu",
+      "phone": "+36 23 111 2222",
+      "website": "https://zoldtakaritas.hu",
+      "address": "2030 Érd, Fő utca 5.",
+      "activity": "takarítás, irodatakarítás, higiénia"
+    },
+    {
+      "id": 2002,
+      "name": "KlímaCentrum Pest Kft.",
+      "email": "info@klimacentrum.hu",
+      "phone": "+36 23 333 4444",
+      "website": "https://klimacentrum.hu",
+      "address": "2040 Budaörs, Gyár utca 2.",
+      "activity": "klíma, szellőzés, hűtés karbantartás"
+    }
+  ]
+}

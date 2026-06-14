@@ -45,11 +45,11 @@ project measurably forward and leave the repo **green** (`npm test` +
       (retries + backoff + cache), `overpass` connector (all 20 regions, fixture
       + live), batched `ingest` (concurrent multi-region fetch → in-memory plan →
       bulk store), operator CLI, unit tests. **Done & green.**
-- [ ] **Phase 2 — Throughput & coverage (current focus):** more sources
-      (public business directories / registries / map platforms), pagination &
-      resumable/incremental crawls, per-host concurrency, a generic HTML/JSON
-      scraping connector + parser, optional `--live` benchmarks. Add VIES `verify`
-      (done) coverage as enrichment.
+- [~] **Phase 2 — Throughput & coverage (current focus):** ~~generic paginated
+      JSON `directory` connector + parser with concurrent page fetch~~ (done);
+      still to do: more real sources (registries / map platforms), resumable/
+      incremental crawl state, per-host concurrency. VIES `verify` enrichment
+      done.
 - [ ] **Phase 3 — Scale & data quality:** quality-scoring refinements, fuzzy
       dedupe across sources, embeddings-assisted categorization (when an API key
       is available), large-batch performance (streaming, write-batching tuning).
@@ -125,6 +125,33 @@ docs/SCOPE.md            scope note (efficiency-only; legality handled elsewhere
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 9 (Phase 2: paginated directory connector)
+
+- **Picked up** run 8's next step: a generic paginated scraping connector +
+  concurrent pagination — a second source to widen coverage and exercise
+  cross-source dedupe.
+- **Shipped (green):**
+  - `lib/paginate.ts` (pure, injected `fetchPage`): `collectPages` — fetches
+    pages in windows of `fetchConcurrency` concurrently, stops at the first empty
+    page, honors `maxPages`. Tested.
+  - `lib/directoryParse.ts` (pure): `parseDirectoryPage` maps a generic JSON
+    directory page (`{results:[{name,email,phone,website,address,vat,activity}]}`)
+    → RawBusiness with provenance. Tested.
+  - `connectors/directory.ts`: paginated JSON connector — live pages an API,
+    offline reads `directory-<region>-pN.json` and stops when the next file is
+    absent. Registered in the connector registry. Fixtures for budapest (2 pages)
+    + pest, with one record overlapping Overpass by VAT.
+  - config: `DIRECTORY_URL`, `DIRECTORY_MAX_PAGES`. README/checklist updated.
+- **Verified:** `npm test` 89/89 green (was 81; +8 paginate/directory tests);
+  `npm run build` clean. Smoke: `collect --source directory --region budapest`
+  paginates p1(3)+p2(2)=5 created; then `--source overpass` merges the
+  overlapping Tiszta Iroda (by VAT) → 11 total leads, categorized across both
+  sources. `Connectors: overpass, directory`.
+- **Next step (Phase 2):** resumable/incremental crawl state — persist a
+  per-(source,region) cursor (last page / last-seen) so re-runs fetch only new
+  pages instead of re-scanning from page 1. Then a second realistic parser
+  (HTML via a light extractor, or another JSON portal).
 
 ### 2026-06-14 — run 8 (reorientation: efficiency-first scraping)
 
