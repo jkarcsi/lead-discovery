@@ -2,6 +2,9 @@ export const config = {
   userAgent: process.env.CRAWLER_USER_AGENT || "ProcuraLeadBot/0.1",
   contactUrl: process.env.CRAWLER_CONTACT_URL || "",
   overpassUrl: process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter",
+  viesUrl:
+    process.env.VIES_URL ||
+    "https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number",
   minRequestIntervalMs: Number(process.env.MIN_REQUEST_INTERVAL_MS || 1500),
   // Storage limitation (GDPR Art. 5(1)(e)): never-engaged personal-data leads
   // are purged after this many days by the retention job. See docs/LEGAL.md.

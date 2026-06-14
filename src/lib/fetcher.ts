@@ -83,3 +83,16 @@ export async function politePost(url: string, body: string): Promise<string> {
   if (!res.ok) throw new Error(`POST ${url} → ${res.status}`);
   return res.text();
 }
+
+// Rate-limited JSON POST (VIES REST takes a JSON body, returns JSON). Same
+// identified UA + per-host throttle as the other polite calls.
+export async function politePostJson(url: string, payload: unknown): Promise<string> {
+  await throttle(hostOf(url));
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { ...headers(), "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`POST ${url} → ${res.status}`);
+  return res.text();
+}

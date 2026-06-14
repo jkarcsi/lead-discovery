@@ -46,8 +46,9 @@ Grt., Eker. tv. and ePrivacy (authority: NAIH). See `docs/LEGAL.md`.
       company-registry / NAV-VIES / KSH-TEÁOR / MKIK connectors (ToS/licence
       permitting); embeddings-assisted categorization.
 - [ ] **Phase 2 — Enrichment & verification:** Tier-2 public contact pages
-      (robots/ToS-gated), VAT/VIES verification (`lastVerifiedAt`), quality
-      scoring refinements, a manual review queue / admin surface.
+      (robots/ToS-gated), ~~VAT/VIES verification (`lastVerifiedAt`)~~ (done —
+      `verify` step), quality scoring refinements, a manual review queue / admin
+      surface.
 - [ ] **Retention & DSAR ops:** purge job for never-engaged personal-data leads;
       DSAR (access/erasure/objection) tooling; Art. 30 record artifact.
 - [ ] **Phase 3 — Cold-invite loop (GATED on counsel):** export to Procura,
@@ -121,6 +122,41 @@ docs/LEGAL.md            the compliance gate
 ---
 
 ## Status log (newest first)
+
+### 2026-06-14 — run 3 (VIES VAT verification / enrichment)
+
+- **Picked up** run 2's next step: VAT verification as an enrichment step.
+- **Shipped (Phase 2 start, green):**
+  - `lib/vies.ts` (pure): `huVatForVies` (8-digit base for checksum-valid HU
+    VAT only), `parseViesResponse` (normalizes VIES JSON; `---`/blank → null,
+    whitespace-collapsed), `verificationPatch` (fills a *missing* address from a
+    *valid* result — never overwrites, never enriches from invalid).
+  - `connectors/vies.ts`: `checkVat(vat, {live})` — live calls the VIES REST API
+    via the new `politePostJson` (identified UA + throttle); offline reads
+    `fixtures/vies.json` keyed by the 8-digit base. Returns null when there's
+    nothing to check (bad VAT / no fixture).
+  - `pipeline/verify.ts`: scans leads with a VAT (default only unverified;
+    `--revalidate` re-checks), stamps `lastVerifiedAt`, enriches a missing
+    address (and recomputes `qualityScore`), writes a `VERIFIED` audit
+    (`{source:"vies", valid}`, no personal data).
+  - `cli.ts`: `verify [--live] [--limit N] [--revalidate]`. `config`/`.env`:
+    `VIES_URL`. `fetcher.ts`: `politePostJson`.
+  - Refactor: extracted the row→LeadInput mapping that was inline in `ingest.ts`
+    into shared `lib/leadRow.ts` (`leadInputFromRow`); `ingest` + `verify` reuse
+    it (no duplicated mapping).
+  - Docs: README (status/quickstart), LEGAL.md (VIES now Implemented in the
+    source-tier table).
+- **Verified:** `npm test` 49/49 green (was 38; +11 VIES unit tests);
+  `npm run build` clean. Offline smoke: collect budapest (7), `verify` →
+  scanned 1/valid 1 (the HU10773381 lead), `lastVerifiedAt` set + `VERIFIED`
+  audit; re-`verify` scans 0 (already verified); `--revalidate` re-checks (2nd
+  audit). Enrichment branch exercised directly: cleared address → `verify`
+  filled it from VIES and recomputed quality 0→100.
+- **Next step:** DSAR (access / erasure / objection) CLI surface — `dsar export
+  <email>` (gather a subject's leads + audit trail) and `dsar erase <email>`
+  (reuse the purge erasure path + add a permanent suppression so re-collection
+  can't resurrect them). Then an Art. 30 record-of-processing artifact
+  (`docs/ROPA.md` or a `stats`-style generator).
 
 ### 2026-06-14 — run 2 (retention/erasure + countrywide coverage)
 

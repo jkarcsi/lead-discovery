@@ -10,6 +10,7 @@
 import { db } from "./db.js";
 import { ingest } from "./pipeline/ingest.js";
 import { purge } from "./pipeline/purge.js";
+import { verify } from "./pipeline/verify.js";
 import { listConnectors } from "./connectors/index.js";
 import { addSuppression, type SuppressionKind } from "./lib/suppression.js";
 import { CATEGORIES, REGIONS } from "./taxonomy.js";
@@ -124,6 +125,18 @@ async function cmdSuppress(positional: string[], flags: Flags): Promise<void> {
   console.log(`Suppressed ${kind} "${value}" (${reason}).`);
 }
 
+async function cmdVerify(flags: Flags): Promise<void> {
+  const live = flags.live === true;
+  const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
+  const revalidate = flags.revalidate === true;
+  console.log(`Verifying VAT numbers against VIES (${live ? "LIVE" : "fixture"})…`);
+  const s = await verify({ live, limit, revalidate });
+  console.log(
+    `Done: scanned ${s.scanned}, valid ${s.valid}, invalid ${s.invalid}, ` +
+      `enriched ${s.enriched}, skipped ${s.skipped}.`,
+  );
+}
+
 async function cmdPurge(flags: Flags): Promise<void> {
   const dryRun = flags["dry-run"] === true;
   const stats = await purge({ dryRun });
@@ -142,6 +155,7 @@ Commands:
   list    [--region <id>] [--category <id>] [--min-quality N] [--limit N]
   stats
   suppress <email|domain> [--kind EMAIL|DOMAIN] [--reason <text>]
+  verify  [--live] [--limit N] [--revalidate]  VAT-check leads against EU VIES
   purge   [--dry-run]   erase now-suppressed + expired personal-data leads
 
 Connectors: ${listConnectors().join(", ")}
@@ -163,6 +177,9 @@ async function main(): Promise<void> {
       break;
     case "suppress":
       await cmdSuppress(positional, flags);
+      break;
+    case "verify":
+      await cmdVerify(flags);
       break;
     case "purge":
       await cmdPurge(flags);

@@ -1,0 +1,18 @@
+{
+  "10773381": {
+    "countryCode": "HU",
+    "vatNumber": "10773381",
+    "requestDate": "2026-06-14+02:00",
+    "valid": true,
+    "name": "TISZTA IRODA KFT.",
+    "address": "1051 BUDAPEST, ARANY JÁNOS UTCA 10."
+  },
+  "10000000": {
+    "countryCode": "HU",
+    "vatNumber": "10000000",
+    "requestDate": "2026-06-14+02:00",
+    "valid": false,
+    "name": "---",
+    "address": "---"
+  }
+}

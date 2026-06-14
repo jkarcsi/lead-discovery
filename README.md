@@ -24,12 +24,14 @@ Procura repo (`docs/lead-discovery-plan.md`).
   (VAT→domain→name key + merge), `quality` (0–100 score)
 - Polite `fetcher` (identified UA, per-domain rate limit, robots.txt honored)
 - Connectors: OSM Overpass (Tier-1, ODbL) with offline fixtures + live mode
+- VAT verification: EU VIES `verify` step (Tier-1) — confirms a lead's VAT is
+  registered, stamps `lastVerifiedAt`, fills a missing address, audits the check
 - Pipeline `ingest` (transform → suppression → dedupe-merge → store + audit)
 - Compliance: `suppression` (global do-not-contact, checked at ingest) + `audit`
   + `retention` (erase now-suppressed and expired never-engaged personal-data
   leads, with a detached audit trail)
-- Operator CLI: `collect` / `list` / `stats` / `suppress` / `purge` (no outreach
-  — gated)
+- Operator CLI: `collect` / `verify` / `list` / `stats` / `suppress` / `purge`
+  (no outreach — gated)
 - Connector coverage: all 19 counties + Budapest (Overpass area mappings derived
   from the shared taxonomy)
 - Unit tests (vitest) for the pure libraries
@@ -46,6 +48,8 @@ npx prisma db push
 npm test                       # pure-library unit tests
 npm run cli -- collect --source overpass --region budapest   # dry-run (fixture)
 npm run cli -- collect --source overpass --region budapest --live   # real Overpass fetch
+npm run cli -- verify                                         # VAT-check leads (fixture)
+npm run cli -- verify --live                                  # real EU VIES lookups
 npm run cli -- stats
 npm run cli -- purge --dry-run                                # preview retention erasures
 ```
