@@ -37,6 +37,14 @@ describe("parseCompanyRegistryPage", () => {
     expect(out[0].classificationText).toContain("épülettakarítás");
   });
 
+  it("derives authoritative categories from the TEÁOR code", () => {
+    const out = parseCompanyRegistryPage(
+      { results: [{ companyName: "X Kft.", teaorCode: "6203" }] },
+      ctx,
+    );
+    expect(out[0].categories).toEqual(["it-support"]);
+  });
+
   it("skips records without a company name", () => {
     expect(parseCompanyRegistryPage({ results: [{ taxNumber: "HU123" }] }, ctx)).toEqual([]);
   });

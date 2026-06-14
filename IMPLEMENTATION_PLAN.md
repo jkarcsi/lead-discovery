@@ -43,7 +43,7 @@ merge across sources on the dedupe key (VAT → domain → name+region).
 | 3 | NAV databases | Verification / risk signals | ✅ `nav` step |
 | 4 | VIES (EU VAT) | VAT validation | ✅ `verify` step |
 | 5 | Közbeszerzés (EKR / TED) | Active-supplier proof | ✅ `kozbeszerzes` (CPV→taxonomy) |
-| 6 | KSH-TEÁOR | Classification reference | ◻ |
+| 6 | KSH-TEÁOR | Classification reference | ✅ TEÁOR→taxonomy mapping |
 | 7 | MKIK chamber | Coverage cross-check | ◻ |
 | 8 | OpenCorporates | Aggregator / normalization | ◻ |
 | 9 | Google Places API | Contact enrichment (official API) | ◻ |
@@ -61,7 +61,8 @@ merge across sources on the dedupe key (VAT → domain → name+region).
   headcount, risk reasons). Remaining: a VIES batch driver / scheduling.
 - ✅ **M1c — Procurement signal:** `kozbeszerzes` connector (award winners =
   active suppliers) with CPV → taxonomy mapping.
-- ◻ **M1d — Classification & cross-check:** KSH-TEÁOR tables, MKIK, OpenCorporates.
+- 🟡 **M1d — Classification & cross-check:** ✅ TEÁOR→taxonomy mapping (registry
+  auto-categorization). Remaining: MKIK chamber connector, OpenCorporates dedupe.
 - ◻ **M2 — Tier-2 enrichment:** Google Places (official API) + polite crawl;
   quality-scoring refinements.
 - ◻ **M2s — Sole traders (EVNY):** behind an explicit flag, built last.
@@ -133,6 +134,10 @@ docs/ROPA.md           generated processing record
 
 ### 2026-06-14
 
+- **M1d — classification:** added `lib/teaor.ts` (TEÁOR'08 → taxonomy) and a
+  shared `lib/prefixMap.ts` helper (CPV + TEÁOR both use it). The e-beszámoló
+  registry now authoritatively categorizes companies from their TEÁOR code (e.g.
+  8425 → fire-safety, 6203 → it-support), not just keywords. 116 tests green.
 - **M1c — procurement signal:** added the `kozbeszerzes` connector (paginated
   factory) + `lib/procurementParse.ts` + `lib/cpv.ts` (CPV → taxonomy). Award
   winners are discovered as active suppliers and **authoritatively categorized
@@ -161,5 +166,5 @@ docs/ROPA.md           generated processing record
 
 ### Next
 
-M1d — classification & cross-check: KSH-TEÁOR reference tables, MKIK chamber
-coverage, OpenCorporates normalization/dedupe.
+M1d remainder — MKIK chamber connector (coverage cross-check) and OpenCorporates
+normalization/dedupe; then M2 Tier-2 enrichment.

@@ -1,12 +1,11 @@
-// CPV (Common Procurement Vocabulary) → Procura taxonomy mapping (pure, no I/O).
+// CPV (Common Procurement Vocabulary) → Procura taxonomy mapping (pure).
 // Procurement notices classify the subject by CPV code; we map the relevant
 // codes to our service categories so a won tender authoritatively categorizes
-// the winning supplier. Matching is by code prefix (CPV is hierarchical), and a
-// code may match several entries (union of categories).
+// the winning supplier.
 
-import { CATEGORIES } from "../taxonomy.js";
+import { categoriesForCodes, type PrefixRule } from "./prefixMap.js";
 
-const CPV_PREFIX_MAP: { prefix: string; category: string }[] = [
+const CPV_RULES: PrefixRule[] = [
   { prefix: "9091", category: "cleaning" }, // cleaning services
   { prefix: "90919", category: "cleaning" }, // office/building cleaning
   { prefix: "45331", category: "hvac" }, // heating/ventilation/AC installation
@@ -24,21 +23,9 @@ const CPV_PREFIX_MAP: { prefix: string; category: string }[] = [
   { prefix: "30200", category: "it-support" }, // computer equipment
 ];
 
-const VALID = new Set(CATEGORIES.map((c) => c.id));
-
-function normalizeCpv(code: string): string {
-  // Strip the check digit / formatting and keep the 8-digit class code.
-  return String(code).replace(/\D/g, "").slice(0, 8);
-}
+// Keep the 8-digit class code (drop the check digit / formatting).
+const normalizeCpv = (code: string): string => String(code).replace(/\D/g, "").slice(0, 8);
 
 export function cpvToCategories(cpvCodes: string[]): string[] {
-  const cats = new Set<string>();
-  for (const raw of cpvCodes ?? []) {
-    const code = normalizeCpv(raw);
-    if (!code) continue;
-    for (const { prefix, category } of CPV_PREFIX_MAP) {
-      if (code.startsWith(prefix) && VALID.has(category)) cats.add(category);
-    }
-  }
-  return [...cats];
+  return categoriesForCodes(cpvCodes, normalizeCpv, CPV_RULES);
 }

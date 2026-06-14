@@ -5,6 +5,7 @@
 // company identity. No I/O.
 
 import type { ParseContext, RawBusiness } from "../types.js";
+import { teaorToCategories } from "./teaor.js";
 
 export type CompanyRecord = {
   id?: string | number;
@@ -39,6 +40,7 @@ export function parseCompanyRegistryPage(
       vatNumber: r.taxNumber ?? null,
       registrationNumber: r.registrationNumber ?? null,
       classificationText: `${r.teaorText ?? ""} ${name}`.trim(),
+      categories: r.teaorCode ? teaorToCategories([r.teaorCode]) : [],
       source: ctx.source,
       sourceUrl: r.id != null ? `${ctx.baseUrl}/cegadat/${r.id}` : ctx.baseUrl,
       sourceLicense: ctx.license,
