@@ -123,6 +123,24 @@ docs/LEGAL.md            the compliance gate
 
 ## Status log (newest first)
 
+### 2026-06-14 — run 4 (branch consolidation → main)
+
+- **Why:** three parallel session branches existed off the Phase-1 base
+  (`7c8f3b3`): `xv65ne` (this one — countrywide coverage + retention/purge +
+  VIES), and `2lg214` / `fqxx72` which each *reimplemented the same* countrywide
+  Overpass coverage. Asked to unify everything onto one **main** branch.
+- **What I did:** based `main` on this branch (the functional superset — nothing
+  from the others was missing in code). The only net-new artifact the parallel
+  branches produced was an Overpass area-selector **test**; salvaged the more
+  thorough version (`tests/overpass.test.ts`) so that work isn't lost. To adopt
+  it, refactored `overpass.ts` to export `areaSelector(regionId)` + `buildQuery`
+  (behavior-preserving; `AREA_QUERY` object → a `REGION_BY_ID` lookup helper).
+- **Verified:** `npm test` 55/55 green (was 49; +6 overpass tests);
+  `npm run build` clean.
+- **Note:** `main` is now the integration branch; `xv65ne` is kept identical to
+  it. The redundant `2lg214` / `fqxx72` / `39ybva` branches can be deleted — all
+  their unique content is in `main`.
+
 ### 2026-06-14 — run 3 (VIES VAT verification / enrichment)
 
 - **Picked up** run 2's next step: VAT verification as an enrichment step.

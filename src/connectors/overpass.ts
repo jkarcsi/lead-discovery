@@ -15,19 +15,25 @@ import type { CollectOptions, Connector } from "./types.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const LICENSE = "ODbL";
 
+const REGION_BY_ID = new Map(REGIONS.map((r) => [r.id, r]));
+
 // Region id → OSM admin area name. Budapest is the capital (a single
 // admin_level-6 relation, no "vármegye" suffix); every county is
-// "<Name> vármegye" at admin_level 6 (the 2022 megye→vármegye rename). Derived
-// from the shared taxonomy so coverage stays in lockstep with Procura's regions
-// — adding a region there makes it collectable here automatically.
+// "<Name> vármegye" at admin_level 6 (the 2022 megye→vármegye rename), unless
+// the taxonomy name already carries the suffix (e.g. "Pest vármegye").
 function osmAreaName(region: { id: string; name: string }): string {
   if (region.id === "budapest") return "Budapest";
   return region.name.endsWith("vármegye") ? region.name : `${region.name} vármegye`;
 }
 
-const AREA_QUERY: Record<string, string> = Object.fromEntries(
-  REGIONS.map((r) => [r.id, `area["name"="${osmAreaName(r)}"]["admin_level"="6"]`]),
-);
+// Overpass area selector for a region id. Derived from the shared taxonomy so
+// coverage stays in lockstep with Procura's regions — adding a region there
+// makes it collectable here automatically. Throws on an unknown id.
+export function areaSelector(regionId: string): string {
+  const region = REGION_BY_ID.get(regionId);
+  if (!region) throw new Error(`No Overpass area mapping for region "${regionId}"`);
+  return `area["name"="${osmAreaName(region)}"]["admin_level"="6"]`;
+}
 
 type OverpassElement = {
   type: string;
@@ -36,11 +42,9 @@ type OverpassElement = {
 };
 type OverpassResponse = { elements?: OverpassElement[] };
 
-function buildQuery(regionId: string, limit: number): string {
-  const area = AREA_QUERY[regionId];
-  if (!area) throw new Error(`No Overpass area mapping for region "${regionId}"`);
+export function buildQuery(regionId: string, limit: number): string {
   return `[out:json][timeout:60];
-${area}->.a;
+${areaSelector(regionId)}->.a;
 (
   nwr["office"](area.a);
   nwr["shop"](area.a);
