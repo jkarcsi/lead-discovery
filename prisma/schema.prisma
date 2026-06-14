@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // SQLite in dev; switch to Postgres in production without schema changes.
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A collected business. `dedupeKey` is the stable identity (VAT → domain →
+// name+region) so re-collection merges rather than duplicates.
+model Lead {
+  id                 String       @id @default(cuid())
+  dedupeKey          String       @unique
+  legalName          String
+  brandName          String?
+  vatNumber          String?
+  registrationNumber String?
+  email              String?
+  phone              String?
+  website            String?
+  domain             String?
+  address            String?
+  regionId           String? // Procura region id
+  categories         String       @default("[]") // JSON: Procura category ids
+  source             String // connector id, e.g. "overpass"
+  sourceUrl          String?
+  sourceLicense      String? // e.g. "ODbL"
+  isPersonalData     Boolean      @default(false) // sole traders / named contacts
+  gdprBasis          String       @default("legitimate_interest")
+  qualityScore       Int          @default(0)
+  lifecycle          String       @default("NEW") // NEW | CONTACTED | RESPONDED | REGISTERED | SUPPRESSED
+  collectedAt        DateTime     @default(now())
+  lastVerifiedAt     DateTime?
+  auditEvents        AuditEvent[]
+
+  @@index([regionId])
+  @@index([lifecycle])
+}
+
+// Global do-not-contact list. Checked before every outreach send; opt-out and
+// hard bounces add to it permanently.
+model Suppression {
+  id        String   @id @default(cuid())
+  value     String   @unique // normalized email or domain
+  kind      String // "EMAIL" | "DOMAIN"
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+// Accountability trail (GDPR): how/when each lead was collected, contacted,
+// opted out, verified, or converted.
+model AuditEvent {
+  id        String   @id @default(cuid())
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      String // COLLECTED | CONTACTED | OPT_OUT | DSAR | VERIFIED | REGISTERED
+  meta      String?
+  createdAt DateTime @default(now())
+}
