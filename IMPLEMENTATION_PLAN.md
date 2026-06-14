@@ -49,7 +49,7 @@ merge across sources on the dedupe key (VAT → domain → name+region).
 | 9 | Google Places API | Contact enrichment (official API) | ✅ `places` step |
 | 10 | Website contact pages | Email / phone enrichment | ✅ `enrich` step |
 | 11 | Aranyoldalak / Telefonkönyv | Listings | ◻ generic paginated connector exists |
-| 12 | EVNY (sole traders) | Sole-trader coverage | ◻ flag-gated, last |
+| 12 | EVNY (sole traders) | Sole-trader coverage | ✅ `evny` (flag-gated) |
 
 ## Milestones
 
@@ -66,7 +66,8 @@ merge across sources on the dedupe key (VAT → domain → name+region).
 - ✅ **M2 — Tier-2 enrichment:** contact-page `enrich` (email/phone from sites),
   Google `places` enrichment (phone/website/address), quality-scoring refinement
   (registration-number bonus).
-- ◻ **M2s — Sole traders (EVNY):** behind an explicit flag, built last.
+- ✅ **M2s — Sole traders (EVNY):** flag-gated `evny` connector; records always
+  flagged personal data; `EVNY_ENABLED=true` required.
 - ◻ **M3 — Scale & operate:** throughput dashboards, scheduled incremental
   refresh, export to Procura.
 
@@ -135,6 +136,10 @@ docs/ROPA.md           generated processing record
 
 ### 2026-06-14
 
+- **M2s — sole traders (EVNY):** flag-gated `evny` connector (`lib/evnyParse.ts`
+  + gate wrapper on the factory). Collection throws unless `EVNY_ENABLED=true`;
+  records are always personal data. Added a `RawBusiness.isPersonalData` hint so
+  a source can assert it. 128 tests green.
 - **M2 — Tier-2 enrichment:** `enrich` (contact-page email/phone via a pure
   `extractContacts` + a fixture/live `contactPage` client) and `places` (Google
   Places phone/website/address via a pure `parsePlace` + fixture/live client),

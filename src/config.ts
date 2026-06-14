@@ -8,6 +8,7 @@ export const config = {
   directoryUrl: process.env.DIRECTORY_URL || "https://example-directory.test/api",
   htmlDirectoryUrl: process.env.HTML_DIRECTORY_URL || "https://example-listing.test",
   ebeszamoloUrl: process.env.EBESZAMOLO_URL || "https://e-beszamolo.im.gov.hu/api",
+  evnyUrl: process.env.EVNY_URL || "https://www.nyilvantarto.hu/evny/api",
   navUrl: process.env.NAV_URL || "https://api.nav.gov.hu/taxpayer",
   kozbeszerzesUrl: process.env.KOZBESZERZES_URL || "https://ekr.gov.hu/api/ertesito",
   mkikUrl: process.env.MKIK_URL || "https://kamreg.mkik.hu/api",
@@ -28,6 +29,9 @@ export const config = {
   fetchBackoffBaseMs: Number(process.env.FETCH_BACKOFF_BASE_MS || 500),
   // Cache identical fetches within a run to avoid redundant network round-trips.
   fetchCacheEnabled: process.env.FETCH_CACHE !== "false",
+  // EVNY (sole-trader registry) is sensitive personal data — collection is OFF
+  // unless the operator explicitly enables it.
+  evnyEnabled: process.env.EVNY_ENABLED === "true",
   // Honor robots.txt only when explicitly asked (operator's call; off by default
   // so collection isn't blocked — usage legality is handled separately).
   respectRobots: process.env.RESPECT_ROBOTS === "true",

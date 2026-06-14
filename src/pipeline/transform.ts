@@ -57,6 +57,6 @@ export function transform(raw: RawBusiness): LeadInput {
     source: raw.source,
     sourceUrl: raw.sourceUrl ?? null,
     sourceLicense: raw.sourceLicense ?? null,
-    isPersonalData: looksPersonal(raw.legalName, email),
+    isPersonalData: raw.isPersonalData === true || looksPersonal(raw.legalName, email),
   };
 }

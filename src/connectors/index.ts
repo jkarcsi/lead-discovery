@@ -9,6 +9,7 @@ import { ebeszamoloConnector } from "./ebeszamolo.js";
 import { kozbeszerzesConnector } from "./kozbeszerzes.js";
 import { mkikConnector } from "./mkik.js";
 import { openCorporatesConnector } from "./opencorporates.js";
+import { evnyConnector } from "./evny.js";
 
 const REGISTRY: Record<string, Connector> = {
   [overpassConnector.id]: overpassConnector,
@@ -18,6 +19,7 @@ const REGISTRY: Record<string, Connector> = {
   [kozbeszerzesConnector.id]: kozbeszerzesConnector,
   [mkikConnector.id]: mkikConnector,
   [openCorporatesConnector.id]: openCorporatesConnector,
+  [evnyConnector.id]: evnyConnector,
 };
 
 export function getConnector(id: string): Connector {

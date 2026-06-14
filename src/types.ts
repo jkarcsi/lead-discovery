@@ -13,6 +13,9 @@ export type RawBusiness = {
   // Authoritative category ids a connector already knows (e.g. CPV-mapped),
   // merged with keyword-derived categories in transform.
   categories?: string[];
+  // A source may assert personal data (e.g. the sole-trader registry); OR-ed
+  // with the name/email heuristic in transform.
+  isPersonalData?: boolean;
   source: string;
   sourceUrl?: string | null;
   sourceLicense?: string | null;

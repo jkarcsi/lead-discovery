@@ -1,0 +1,22 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "id": "EV-50012345",
+      "name": "Kovács János e.v.",
+      "registrationNumber": "50012345",
+      "seat": "1089 Budapest, Orczy út 4.",
+      "teaorCode": "8121",
+      "teaorText": "épülettakarítás",
+      "phone": "+36 30 555 1212"
+    },
+    {
+      "id": "EV-50067890",
+      "name": "Nagy Erika e.v.",
+      "registrationNumber": "50067890",
+      "seat": "1043 Budapest, Berda József utca 9.",
+      "teaorCode": "9511",
+      "teaorText": "számítógép javítása, IT support"
+    }
+  ]
+}
