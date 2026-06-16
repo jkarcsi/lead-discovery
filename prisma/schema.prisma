@@ -27,6 +27,9 @@ model Lead {
   address            String?
   regionId           String? // Procura region id
   categories         String       @default("[]") // JSON: Procura category ids
+  // Free-text categorization input (OSM tags + name + brand). Persisted so leads
+  // can be re-categorized after a keyword change without re-fetching (recategorize).
+  classificationText String?
   source             String // connector id, e.g. "overpass"
   sourceUrl          String?
   sourceLicense      String? // e.g. "ODbL"

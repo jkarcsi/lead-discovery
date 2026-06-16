@@ -48,19 +48,21 @@ export async function enrichContacts(opts: EnrichOptions = {}): Promise<EnrichSt
   const total = leads.length;
   const startedAt = Date.now();
 
-  // Fetch is the slow, network-bound part (each lead is a different host, so the
-  // per-host throttle doesn't serialize them) — run it in concurrent windows.
-  // DB writes stay sequential because SQLite is single-writer. We process one
-  // window at a time so progress (and writes) are incremental, not all-at-end.
-  const window = Math.max(1, config.fetchConcurrency);
-  for (let i = 0; i < leads.length; i += window) {
-    const batch = leads.slice(i, i + window);
-    const fetched = await mapWithConcurrency(batch, window, async (lead) => ({
-      lead,
-      contacts: await fetchContacts(lead.domain as string, { live }),
-    }));
+  // Fetch is the slow, network-bound part; a dead/slow site can take several
+  // seconds. A *continuous* worker pool keeps all workers saturated so one slow
+  // site doesn't block the others (fixed-size windows stalled on their slowest
+  // member). DB writes are serialized through a tiny mutex because SQLite is
+  // single-writer, while fetches keep running concurrently.
+  let writeChain: Promise<unknown> = Promise.resolve();
+  const serialize = <T>(fn: () => Promise<T>): Promise<T> => {
+    const run = writeChain.then(fn, fn);
+    writeChain = run.then(undefined, () => undefined);
+    return run;
+  };
 
-    for (const { lead, contacts } of fetched) {
+  await mapWithConcurrency(leads, Math.max(1, config.fetchConcurrency), async (lead) => {
+    const contacts = await fetchContacts(lead.domain as string, { live });
+    await serialize(async () => {
       stats.scanned++;
       if (contacts) {
         const patch: { email?: string; phone?: string } = {};
@@ -83,10 +85,9 @@ export async function enrichContacts(opts: EnrichOptions = {}): Promise<EnrichSt
       } else {
         stats.skipped++;
       }
-
       opts.onProgress?.({ ...stats, total, elapsedMs: Date.now() - startedAt });
-    }
-  }
+    });
+  });
 
   return stats;
 }

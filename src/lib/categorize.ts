@@ -12,14 +12,32 @@ function fold(s: string): string {
     .replace(/[̀-ͯ]/g, "");
 }
 
-// Return every category whose keywords appear in the text. A lead can belong to
-// several categories (e.g. a facility-services firm doing cleaning + security).
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Whole-word (token) match on the already-folded haystack: the keyword must be
+// bounded left and right by a non-letter/non-digit. This is what stops short or
+// generic tokens from matching inside unrelated words — e.g. "it" hitting
+// "Margit"/"nonprofit"/"fit", or "support" hitting "Bikesupport". Distinct from
+// the substring `keywords`, which intentionally match inside Hungarian compounds.
+function hasWord(hay: string, word: string): boolean {
+  const w = fold(word).trim();
+  if (!w) return false;
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(w)}(?![\\p{L}\\p{N}])`, "u").test(hay);
+}
+
+// Return every category that matches the text, by either a substring stem
+// keyword or a whole-word keyword. A lead can belong to several categories
+// (e.g. a facility-services firm doing cleaning + security).
 export function categorize(text: string | null | undefined): string[] {
   const hay = fold(text ?? "");
   if (!hay) return [];
   const hits: string[] = [];
   for (const cat of CATEGORIES) {
-    if (cat.keywords.some((kw) => hay.includes(fold(kw)))) hits.push(cat.id);
+    const bySubstring = cat.keywords.some((kw) => hay.includes(fold(kw)));
+    const byWord = (cat.wordKeywords ?? []).some((kw) => hasWord(hay, kw));
+    if (bySubstring || byWord) hits.push(cat.id);
   }
   return hits;
 }

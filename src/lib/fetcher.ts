@@ -87,23 +87,28 @@ export async function isAllowedByRobots(url: string): Promise<boolean> {
   return robots.isAllowed(url, config.userAgent) ?? true;
 }
 
+// Per-call transport overrides. Curated APIs want the resilient defaults;
+// scraping arbitrary websites (enrich) wants to be impatient — few/no retries
+// and a shorter timeout — so one slow site doesn't cost retries × timeout.
+export type RequestOptions = { retries?: number; timeoutMs?: number };
+
 // Retryable transport: throttles, fetches, and retries transient failures
 // (network errors + 429/5xx) with exponential backoff. Returns the body text.
 async function request(
   method: "GET" | "POST",
   url: string,
-  init: { body?: string; contentType?: string } = {},
+  init: { body?: string; contentType?: string } & RequestOptions = {},
 ): Promise<string> {
+  const maxRetries = init.retries ?? config.fetchMaxRetries;
+  const timeoutMs = init.timeoutMs ?? config.fetchTimeoutMs;
   let lastErr: unknown;
-  for (let attempt = 0; attempt <= config.fetchMaxRetries; attempt++) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) await sleep(config.fetchBackoffBaseMs * 2 ** (attempt - 1));
     await throttle(hostOf(url));
     // Abort a request that exceeds the timeout so one slow host can't stall the
     // run; the abort surfaces as a thrown error and is retried like any blip.
-    const controller = config.fetchTimeoutMs > 0 ? new AbortController() : undefined;
-    const timer = controller
-      ? setTimeout(() => controller.abort(), config.fetchTimeoutMs)
-      : undefined;
+    const controller = timeoutMs > 0 ? new AbortController() : undefined;
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
     try {
       const res = await fetch(url, {
         method,
@@ -140,13 +145,16 @@ function cacheKey(method: string, url: string, body?: string): string {
 
 // Rate-limited, retried, cached GET. robots.txt is checked only when the
 // operator has opted in globally (config.respectRobots).
-export async function politeGet(url: string, opts: { checkRobots?: boolean } = {}): Promise<string> {
+export async function politeGet(
+  url: string,
+  opts: { checkRobots?: boolean } & RequestOptions = {},
+): Promise<string> {
   if ((opts.checkRobots ?? config.respectRobots) && !(await isAllowedByRobots(url))) {
     throw new Error(`robots.txt disallows ${url}`);
   }
   const key = cacheKey("GET", url);
   if (config.fetchCacheEnabled && responseCache.has(key)) return responseCache.get(key)!;
-  const body = await request("GET", url);
+  const body = await request("GET", url, { retries: opts.retries, timeoutMs: opts.timeoutMs });
   if (config.fetchCacheEnabled) responseCache.set(key, body);
   return body;
 }
