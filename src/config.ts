@@ -2,6 +2,17 @@ export const config = {
   userAgent: process.env.CRAWLER_USER_AGENT || "ProcuraLeadBot/0.1",
   contactUrl: process.env.CRAWLER_CONTACT_URL || "",
   overpassUrl: process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter",
+  // Public Overpass mirrors, tried in order after the primary endpoint. The
+  // public API rate-limits (429) and times out (504) under load; rotating to a
+  // mirror turns a failed region into a retry elsewhere. Override/extend via
+  // OVERPASS_MIRRORS (comma-separated). De-duped against overpassUrl at use.
+  overpassMirrors: (
+    process.env.OVERPASS_MIRRORS ||
+    "https://overpass.kumi.systems/api/interpreter,https://overpass.openstreetmap.ru/api/interpreter,https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+  )
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
   viesUrl:
     process.env.VIES_URL ||
     "https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number",
@@ -27,6 +38,10 @@ export const config = {
   // a flaky 503 shouldn't drop a record).
   fetchMaxRetries: Number(process.env.FETCH_MAX_RETRIES || 3),
   fetchBackoffBaseMs: Number(process.env.FETCH_BACKOFF_BASE_MS || 500),
+  // Per-request timeout. Without it a single hung/slow site (common when scraping
+  // contact pages) can stall a whole sequential run indefinitely. A timed-out
+  // request is treated as a transient failure and retried. 0 disables.
+  fetchTimeoutMs: Number(process.env.FETCH_TIMEOUT_MS || 15000),
   // Cache identical fetches within a run to avoid redundant network round-trips.
   fetchCacheEnabled: process.env.FETCH_CACHE !== "false",
   // EVNY (sole-trader registry) is sensitive personal data — collection is OFF

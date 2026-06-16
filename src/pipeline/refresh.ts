@@ -8,10 +8,18 @@ import { listConnectors } from "../connectors/index.js";
 import { ingest } from "./ingest.js";
 import { verify } from "./verify.js";
 import { navVerify } from "./navVerify.js";
-import { enrichContacts } from "./enrich.js";
+import { enrichContacts, type EnrichOptions } from "./enrich.js";
 import { placesEnrich } from "./placesEnrich.js";
 
-export type RefreshOptions = { regionIds: string[]; live?: boolean };
+export type RefreshOptions = {
+  regionIds: string[];
+  live?: boolean;
+  // Step-level progress lines (each source, each enrichment phase) so a long
+  // live refresh isn't silent until the end. Omitted = no logging.
+  log?: (line: string) => void;
+  // Forwarded to the contact-enrichment step (the slow website-scraping phase).
+  onProgress?: EnrichOptions["onProgress"];
+};
 
 export type RefreshStats = {
   sources: { source: string; fetched: number; created: number; merged: number }[];
@@ -23,18 +31,26 @@ export type RefreshStats = {
 
 export async function refresh(opts: RefreshOptions): Promise<RefreshStats> {
   const live = opts.live ?? false;
+  const log = opts.log ?? (() => {});
   // EVNY (sensitive) only when explicitly enabled.
   const sources = listConnectors().filter((s) => s !== "evny" || config.evnyEnabled);
 
   const perSource: RefreshStats["sources"] = [];
-  for (const source of sources) {
+  for (const [i, source] of sources.entries()) {
+    log(`[${i + 1}/${sources.length}] collecting ${source}…`);
     const s = await ingest({ source, regionIds: opts.regionIds, live });
     perSource.push({ source, fetched: s.fetched, created: s.created, merged: s.merged });
+    const failed = s.failedRegions.length ? ` (${s.failedRegions.length} region(s) failed)` : "";
+    log(`  ${source.padEnd(14)} +${s.created} new, ${s.merged} merged${failed}`);
   }
 
+  log("verifying VAT against VIES…");
   const v = await verify({ live });
+  log("checking tax status against NAV…");
   const n = await navVerify({ live });
-  const e = await enrichContacts({ live });
+  log("enriching contacts from websites…");
+  const e = await enrichContacts({ live, onProgress: opts.onProgress });
+  log("enriching from Google Places…");
   const p = await placesEnrich({ live });
 
   return {

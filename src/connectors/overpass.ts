@@ -100,6 +100,31 @@ function loadFixture(regionId: string): OverpassResponse {
   return JSON.parse(readFileSync(path, "utf8")) as OverpassResponse;
 }
 
+// Ordered, de-duplicated list of endpoints to try for one query: the primary
+// first, then the configured mirrors.
+function overpassEndpoints(): string[] {
+  return [...new Set([config.overpassUrl, ...config.overpassMirrors])];
+}
+
+// Fetch one Overpass query, falling back across endpoints. Each endpoint already
+// retries transient failures internally (politePost); if it still fails (e.g.
+// sustained 429/504, or unreachable), we move to the next mirror rather than
+// dropping the whole region. Throws only when every endpoint is exhausted.
+async function fetchOverpass(body: string): Promise<OverpassResponse> {
+  const endpoints = overpassEndpoints();
+  let lastErr: unknown;
+  for (const url of endpoints) {
+    try {
+      return JSON.parse(await politePost(url, body)) as OverpassResponse;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr instanceof Error
+    ? new Error(`all ${endpoints.length} Overpass endpoint(s) failed: ${lastErr.message}`)
+    : lastErr;
+}
+
 export const overpassConnector: Connector = {
   id: "overpass",
   license: LICENSE,
@@ -107,8 +132,7 @@ export const overpassConnector: Connector = {
   async collect({ regionId, live, limit = 200 }: CollectOptions): Promise<CollectResult> {
     let json: OverpassResponse;
     if (live) {
-      const body = buildQuery(regionId, limit);
-      json = JSON.parse(await politePost(config.overpassUrl, body)) as OverpassResponse;
+      json = await fetchOverpass(buildQuery(regionId, limit));
     } else {
       json = loadFixture(regionId);
     }

@@ -5,7 +5,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { config } from "../config.js";
-import { politeGet } from "../lib/fetcher.js";
+import { politeGet, assertLiveEndpoint } from "../lib/fetcher.js";
 import { collectPages } from "../lib/paginate.js";
 import type { ParseContext, RawBusiness } from "../types.js";
 import type { CollectOptions, CollectResult, Connector } from "./types.js";
@@ -18,6 +18,8 @@ export type PaginatedSpec = {
   pageUrl: (regionId: string, page: number) => string;
   fixturePath: (regionId: string, page: number) => string;
   parsePage: (body: string, ctx: ParseContext) => RawBusiness[];
+  // Env var that configures baseUrl, named in the "no live endpoint" error.
+  envVar?: string;
 };
 
 export function makePaginatedConnector(spec: PaginatedSpec): Connector {
@@ -26,6 +28,8 @@ export function makePaginatedConnector(spec: PaginatedSpec): Connector {
     license: spec.license,
     async collect({ regionId, live, limit, startPage }: CollectOptions): Promise<CollectResult> {
       const ctx: ParseContext = { baseUrl: spec.baseUrl, license: spec.license, source: spec.id };
+
+      if (live) assertLiveEndpoint(spec.baseUrl, spec.id, spec.envVar ?? "the source URL");
 
       const fetchPage = async (page: number): Promise<RawBusiness[]> => {
         let body: string;

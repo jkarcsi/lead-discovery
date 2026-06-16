@@ -117,6 +117,7 @@ src/pipeline/          ingest (concurrent) → store (batched); verify, review,
                        purge, dsar, crawlState
 src/cli.ts             operator CLI
 tests/                 vitest unit tests
+docs/OPERATING.md      operator runbook (live run order, command reference)
 docs/SCOPE.md          scope + efficiency tooling
 docs/ROPA.md           generated processing record
 ```
@@ -124,8 +125,9 @@ docs/ROPA.md           generated processing record
 ## Development workflow
 
 1. Read this plan (esp. the progress log) and `docs/SCOPE.md`.
-2. Pick the next open roadmap/milestone item (currently **M1b — NAV connector**),
-   biasing toward throughput and coverage.
+2. Pick the next open roadmap/milestone item (M1–M3 are done; see **Next** —
+   real live endpoints/credentials, scheduled refresh), biasing toward throughput
+   and coverage.
 3. Implement with tests: pure logic in `src/lib/*`, side effects in
    `src/pipeline/*` and `src/connectors/*` (new sources via the paginated factory).
 4. Verify green: `npm test`, `npm run build`, an offline CLI smoke.
@@ -133,6 +135,28 @@ docs/ROPA.md           generated processing record
 6. Append a dated entry to the progress log.
 
 ## Progress log (newest first)
+
+### 2026-06-15
+
+- **Live-mode hardening (reliability).** Fixed the root cause of the Overpass
+  `429`/`504` floods under `--region all --live`: the per-host throttle wrote its
+  timestamp *after* sleeping, so concurrent requests all read the same stale time
+  and fired together — the gap was never enforced. It now reserves each host slot
+  synchronously, so requests are genuinely spaced by `MIN_REQUEST_INTERVAL_MS`
+  regardless of `FETCH_CONCURRENCY`. Added: `Retry-After` is honored on `429`/`5xx`;
+  the Overpass connector falls back across mirrors (`OVERPASS_MIRRORS`) so a single
+  endpoint's rate-limit/timeout no longer drops a region; live fetches against a
+  reserved placeholder TLD (`directory`/`htmldir` defaults) now fail fast with a
+  message naming the env var to set, instead of an opaque "fetch failed". Prisma
+  client now generates for Windows + Linux (repo is developed from both). New
+  `tests/fetcher.test.ts` locks the throttle serialization and placeholder guard.
+  135 tests green.
+- **`enrich` throughput + observability.** Added a per-request `FETCH_TIMEOUT_MS`
+  (default 15s) so a single hung website can't stall a run; made `enrich` fetch
+  websites in concurrent windows (`FETCH_CONCURRENCY`) while keeping DB writes
+  sequential (SQLite is single-writer); added an `onProgress` callback the CLI
+  uses to print `[done/total] … ~Ns left` progress (~20 lines) on long live runs.
+  Documented the full operating flow in `docs/OPERATING.md`.
 
 ### 2026-06-14
 
@@ -194,6 +218,8 @@ docs/ROPA.md           generated processing record
 
 ### Next
 
-All planned milestones (M1–M3) are complete. Future work: wire real `--live`
-endpoints behind the existing connectors/clients, scheduled `refresh` (cron),
-and embeddings-assisted categorization when an API key is available.
+All planned milestones (M1–M3) are complete, and the live path is hardened
+(throttle, mirror fallback, clear endpoint errors). Future work: wire real
+`--live` endpoints/credentials behind the `directory`/`htmldir`/registry clients,
+scheduled `refresh` (cron), and embeddings-assisted categorization when an API
+key is available.

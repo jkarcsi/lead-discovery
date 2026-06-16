@@ -8,7 +8,10 @@
 import robotsParser from "robots-parser";
 import { config } from "../config.js";
 
-const lastRequestAt = new Map<string, number>();
+// Per-host "next free slot" timestamp. We reserve a slot *synchronously* (before
+// any await), so N concurrent requests to one host are spaced minRequestIntervalMs
+// apart instead of all reading the same stale time and firing together.
+const nextSlotAt = new Map<string, number>();
 const robotsCache = new Map<string, ReturnType<typeof robotsParser> | null>();
 const responseCache = new Map<string, string>();
 
@@ -24,14 +27,38 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Block until at least `minRequestIntervalMs` has passed since the last request
-// to this host (0 disables throttling for sources that allow it).
+// Reserved TLDs (RFC 2606/6761) used as endpoint placeholders in config. A live
+// crawl against one can only "fetch fail", so we catch it early with a message
+// that says what to configure instead of a bare network error.
+const PLACEHOLDER_TLDS = [".test", ".invalid", ".example", ".localhost"];
+
+export function isPlaceholderEndpoint(url: string): boolean {
+  const host = hostOf(url);
+  return PLACEHOLDER_TLDS.some((tld) => host.endsWith(tld));
+}
+
+// Guard a live fetch: a placeholder endpoint means no real source is wired yet.
+export function assertLiveEndpoint(url: string, source: string, envVar: string): void {
+  if (isPlaceholderEndpoint(url)) {
+    throw new Error(
+      `source "${source}" has no live endpoint configured (${url} is a placeholder) — ` +
+        `set ${envVar} in .env to a real listing URL, or run without --live to use fixtures`,
+    );
+  }
+}
+
+// Reserve this host's next request slot and block until it's due. Reserving the
+// slot synchronously (advancing nextSlotAt before the await) is what makes the
+// gap hold under concurrency: each caller claims a distinct, later slot rather
+// than every concurrent caller reading the same timestamp and firing at once.
+// 0 disables throttling for sources that allow it.
 async function throttle(host: string): Promise<void> {
   if (config.minRequestIntervalMs <= 0) return;
-  const last = lastRequestAt.get(host) ?? 0;
-  const wait = config.minRequestIntervalMs - (Date.now() - last);
+  const now = Date.now();
+  const slot = Math.max(now, nextSlotAt.get(host) ?? 0);
+  nextSlotAt.set(host, slot + config.minRequestIntervalMs);
+  const wait = slot - now;
   if (wait > 0) await sleep(wait);
-  lastRequestAt.set(host, Date.now());
 }
 
 function headers(): Record<string, string> {
@@ -71,6 +98,12 @@ async function request(
   for (let attempt = 0; attempt <= config.fetchMaxRetries; attempt++) {
     if (attempt > 0) await sleep(config.fetchBackoffBaseMs * 2 ** (attempt - 1));
     await throttle(hostOf(url));
+    // Abort a request that exceeds the timeout so one slow host can't stall the
+    // run; the abort surfaces as a thrown error and is retried like any blip.
+    const controller = config.fetchTimeoutMs > 0 ? new AbortController() : undefined;
+    const timer = controller
+      ? setTimeout(() => controller.abort(), config.fetchTimeoutMs)
+      : undefined;
     try {
       const res = await fetch(url, {
         method,
@@ -79,16 +112,23 @@ async function request(
           ...(init.contentType ? { "Content-Type": init.contentType } : {}),
         },
         ...(init.body !== undefined ? { body: init.body } : {}),
+        ...(controller ? { signal: controller.signal } : {}),
       });
       // 429/5xx are worth retrying; other non-OK statuses are terminal.
       if (res.status === 429 || res.status >= 500) {
         lastErr = new Error(`${method} ${url} → ${res.status}`);
+        // Respect an explicit Retry-After (seconds) before the next attempt;
+        // rate-limiters like Overpass use it to tell us exactly how long to wait.
+        const retryAfter = Number(res.headers.get("retry-after"));
+        if (Number.isFinite(retryAfter) && retryAfter > 0) await sleep(retryAfter * 1000);
         continue;
       }
       if (!res.ok) throw new Error(`${method} ${url} → ${res.status}`);
-      return res.text();
+      return await res.text();
     } catch (err) {
       lastErr = err;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error(`${method} ${url} failed`);

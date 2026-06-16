@@ -200,11 +200,38 @@ async function cmdEnrich(flags: Flags): Promise<void> {
   const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
   const revalidate = flags.revalidate === true;
   console.log(`Enriching contacts from websites (${live ? "LIVE" : "fixture"})…`);
-  const s = await enrichContacts({ live, limit, revalidate });
+  const s = await enrichContacts({ live, limit, revalidate, onProgress: progressLogger() });
   console.log(
     `Done: scanned ${s.scanned}, enriched ${s.enriched} ` +
       `(+${s.emailsAdded} email, +${s.phonesAdded} phone), skipped ${s.skipped}.`,
   );
+}
+
+// A throttled progress printer for long enrichment runs: logs ~20 lines total
+// (and always the last one), with a running tally, elapsed time and a rough ETA.
+function progressLogger(): (p: {
+  scanned: number;
+  enriched: number;
+  emailsAdded: number;
+  phonesAdded: number;
+  skipped: number;
+  total: number;
+  elapsedMs: number;
+}) => void {
+  let step = 0;
+  return (p) => {
+    step = step || Math.max(1, Math.floor(p.total / 20));
+    if (p.scanned % step !== 0 && p.scanned !== p.total) return;
+    const secs = p.elapsedMs / 1000;
+    const rate = secs > 0 ? p.scanned / secs : 0;
+    const eta = rate > 0 ? Math.round((p.total - p.scanned) / rate) : 0;
+    const width = String(p.total).length;
+    console.log(
+      `  [${String(p.scanned).padStart(width)}/${p.total}] ` +
+        `+${p.emailsAdded} email, +${p.phonesAdded} phone, ${p.skipped} no-page · ` +
+        `${secs.toFixed(0)}s elapsed, ~${eta}s left`,
+    );
+  };
 }
 
 async function cmdPlaces(flags: Flags): Promise<void> {
@@ -285,8 +312,12 @@ async function cmdRefresh(flags: Flags): Promise<void> {
   const regionIds = resolveRegions(str(flags, "region") ?? "all");
   const live = flags.live === true;
   console.log(`Refresh: collecting all sources for ${regionIds.length} region(s) (${live ? "LIVE" : "fixture"})…`);
-  const s = await refresh({ regionIds, live });
-  for (const r of s.sources) console.log(`  ${r.source.padEnd(14)} +${r.created} new, ${r.merged} merged`);
+  const s = await refresh({
+    regionIds,
+    live,
+    log: (line) => console.log(line),
+    onProgress: progressLogger(),
+  });
   console.log(
     `Enrichment: VIES ${s.verified}, NAV ${s.navChecked}, contacts ${s.contactsEnriched}, ` +
       `places ${s.placesEnriched}.`,
