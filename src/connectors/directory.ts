@@ -16,6 +16,7 @@ export const directoryConnector = makePaginatedConnector({
   id: "directory",
   license: LICENSE,
   baseUrl: config.directoryUrl,
+  envVar: "DIRECTORY_URL",
   maxPages: config.directoryMaxPages,
   pageUrl: (regionId, page) =>
     `${config.directoryUrl}?region=${encodeURIComponent(regionId)}&page=${page}`,

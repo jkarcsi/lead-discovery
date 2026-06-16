@@ -1,5 +1,8 @@
 generator client {
   provider = "prisma-client-js"
+  // Repo lives on a shared drive used from both Windows and WSL/Linux; generate
+  // engines for both so `prisma generate` on either host yields a working client.
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
 }
 
 datasource db {

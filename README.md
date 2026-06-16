@@ -31,24 +31,52 @@ minimize wasted round-trips, and keep crawls resilient and idempotent. See
 
 ## Status
 
-**Phase 1 (collection MVP) is complete and green.**
+**Milestones M1–M3 are complete and green** (135 tests). See
+[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for the milestone log.
 
-- Domain model (`prisma/schema.prisma`): `Lead`, `Suppression`, `AuditEvent`
+- Domain model (`prisma/schema.prisma`): `Lead`, `Suppression`, `AuditEvent`,
+  `CrawlState`. Prisma is generated for Windows + Linux (the repo is developed
+  from both Windows and WSL).
 - Procura-aligned taxonomy (`src/taxonomy.ts`) — identical category/region ids
 - Pure libs: `normalize`, `categorize`, `dedupe`, `quality`, `concurrency`,
   `ingestPlan` (all I/O-free + unit-tested)
-- Resilient `fetcher` (retries + backoff + in-run cache, tunable throttle)
+- Resilient `fetcher` (retries + backoff + in-run cache + a per-host throttle
+  that holds under concurrency; honors `Retry-After`)
 - Connectors (a paginated-source factory makes adding more cheap): OSM Overpass
-  (all 20 regions); company registry `ebeszamolo`; a JSON `directory`; an HTML
-  `htmldir`; chamber registry `mkik`; aggregator `opencorporates`; public
-  procurement `kozbeszerzes` (CPV→taxonomy); enrichment via EU VIES `verify` and
-  NAV `nav`. Overlapping businesses merge across sources on the dedupe key
-  (VAT → registration number → domain → name+region).
+  (all 20 regions, with mirror fallback); company registry `ebeszamolo`; a JSON
+  `directory`; an HTML `htmldir`; chamber registry `mkik`; aggregator
+  `opencorporates`; public procurement `kozbeszerzes` (CPV→taxonomy); sole-trader
+  `evny` (flag-gated, personal data). Enrichment: EU VIES `verify`, NAV `nav`,
+  website contact pages `enrich`, Google Places `places`. Overlapping businesses
+  merge across sources on the dedupe key (VAT → registration number → domain →
+  name+region).
 - Pipeline: concurrent multi-region `ingest` → batched `store`
 - Operator CLI: `collect` / `refresh` (all sources + enrich) / `verify` (VIES) /
   `nav` (tax-status) / `enrich` (contact pages) / `places` (Google Places) /
   `review` / `report` (dashboard) / `export` (NDJSON → Procura) / `list` /
   `stats` / `suppress` / `dsar` / `ropa` / `purge`
+
+### Live mode
+
+A full operating walkthrough — the email-optimized run order, a per-command
+reference, the live-source matrix, and how to wire `directory`/`htmldir` — is in
+[`docs/OPERATING.md`](docs/OPERATING.md).
+
+`--live` switches a connector from its offline fixtures to the real network.
+What that needs per source:
+
+- **`overpass`** works live out of the box — it queries the public Overpass API
+  and falls back across mirrors (`OVERPASS_MIRRORS`) when one rate-limits (`429`)
+  or times out (`504`). The per-host throttle (`MIN_REQUEST_INTERVAL_MS`) spaces
+  requests so a full-country crawl doesn't trip rate limits. Note the public
+  `overpass-api.de` is IPv6-only; a host without IPv6 routing should rely on the
+  IPv4 mirrors or set `OVERPASS_URL` to one.
+- **`directory` / `htmldir`** ship with placeholder endpoints
+  (`*.test`) and only run live once you point `DIRECTORY_URL` / `HTML_DIRECTORY_URL`
+  at a real listing. Run them live without that and they fail fast with a message
+  saying exactly which env var to set (rather than an opaque "fetch failed").
+- The registry/enrichment steps (`ebeszamolo`, `nav`, `places`, …) default to
+  the official endpoints; some need credentials/keys before they return data.
 
 Roadmap and progress: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
@@ -67,14 +95,16 @@ npm run cli -- collect --source overpass  --region all --live     # full-country
 npm run cli -- stats
 ```
 
-Without `--live`, the Overpass connector reads `src/connectors/fixtures/`, so
-the pipeline runs fully offline. `--live` hits the public Overpass API.
+Without `--live`, every connector reads `src/connectors/fixtures/`, so the
+pipeline runs fully offline. `--live` hits real endpoints (see **Live mode**).
 
 ## Tuning (env)
 
 `FETCH_CONCURRENCY` (parallel fetches), `MIN_REQUEST_INTERVAL_MS` (per-host gap,
 0 to disable), `FETCH_MAX_RETRIES` / `FETCH_BACKOFF_BASE_MS`, `FETCH_CACHE`,
-`WRITE_BATCH_SIZE`, `RESPECT_ROBOTS`. See `src/config.ts` and `.env.example`.
+`WRITE_BATCH_SIZE`, `RESPECT_ROBOTS`, `OVERPASS_MIRRORS` (comma-separated
+fallback endpoints), `OVERPASS_URL` / `DIRECTORY_URL` / `HTML_DIRECTORY_URL`
+(live source endpoints). See `src/config.ts` and `.env.example`.
 
 ## Architecture
 
