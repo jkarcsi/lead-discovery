@@ -48,6 +48,11 @@ export function mergeLead(existing: LeadInput, incoming: LeadInput): LeadInput {
     vatNumber: pick(existing.vatNumber, incoming.vatNumber),
     registrationNumber: pick(existing.registrationNumber, incoming.registrationNumber),
     regionId: pick(existing.regionId, incoming.regionId),
+    // Keep the richer categorization text (more signal for re-categorization).
+    classificationText:
+      (incoming.classificationText?.length ?? 0) > (existing.classificationText?.length ?? 0)
+        ? incoming.classificationText
+        : (existing.classificationText ?? incoming.classificationText ?? null),
     // Union of categories from both observations.
     categories: Array.from(new Set([...existing.categories, ...incoming.categories])),
     // Personal-data flag is sticky: once any source says so, treat as such.

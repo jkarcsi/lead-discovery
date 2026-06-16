@@ -15,6 +15,7 @@ import { purge } from "./pipeline/purge.js";
 import { verify } from "./pipeline/verify.js";
 import { navVerify } from "./pipeline/navVerify.js";
 import { enrichContacts } from "./pipeline/enrich.js";
+import { recategorize } from "./pipeline/recategorize.js";
 import { placesEnrich } from "./pipeline/placesEnrich.js";
 import { refresh } from "./pipeline/refresh.js";
 import { exportProcura } from "./pipeline/exportProcura.js";
@@ -247,6 +248,17 @@ async function cmdPlaces(flags: Flags): Promise<void> {
   );
 }
 
+async function cmdRecategorize(flags: Flags): Promise<void> {
+  const dryRun = flags["dry-run"] === true;
+  const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
+  console.log(`Re-categorizing leads from stored classification text${dryRun ? " (dry-run)" : ""}…`);
+  const s = await recategorize({ dryRun, limit });
+  console.log(
+    `${dryRun ? "[dry-run] " : ""}Scanned ${s.scanned}, changed ${s.changed} ` +
+      `(cleared ${s.cleared}), used name-fallback ${s.fallback}.`,
+  );
+}
+
 async function cmdPurge(flags: Flags): Promise<void> {
   const dryRun = flags["dry-run"] === true;
   const stats = await purge({ dryRun });
@@ -405,6 +417,7 @@ Commands:
   places  [--live] [--limit N] [--revalidate]  fill phone/website/address via Places
   refresh [--region <id|a,b|all>] [--live]     collect all sources + enrich
   report                                       coverage / enrichment dashboard
+  recategorize [--dry-run] [--limit N]         recompute categories on stored leads
   export  [--out f.ndjson] [--min-quality N] [--approved] [--include-personal]
   dsar    <export|erase> <email>   data-subject access / erasure (GDPR)
   ropa    [--write]   print (or write docs/ROPA.md) the Art. 30 record
@@ -447,6 +460,9 @@ async function main(): Promise<void> {
       break;
     case "report":
       await cmdReport();
+      break;
+    case "recategorize":
+      await cmdRecategorize(flags);
       break;
     case "export":
       await cmdExport(flags);

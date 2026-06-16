@@ -18,6 +18,7 @@ export type LeadRow = {
   registrationNumber: string | null;
   regionId: string | null;
   categories: string; // JSON array of category ids
+  classificationText: string | null;
   source: string;
   sourceUrl: string | null;
   sourceLicense: string | null;
@@ -37,6 +38,7 @@ export function leadInputFromRow(row: LeadRow): LeadInput {
     registrationNumber: row.registrationNumber,
     regionId: row.regionId,
     categories: JSON.parse(row.categories) as string[],
+    classificationText: row.classificationText,
     source: row.source,
     sourceUrl: row.sourceUrl,
     sourceLicense: row.sourceLicense,

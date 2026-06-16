@@ -54,6 +54,7 @@ export function transform(raw: RawBusiness): LeadInput {
     registrationNumber: raw.registrationNumber?.trim() || null,
     regionId,
     categories,
+    classificationText: classificationText || null,
     source: raw.source,
     sourceUrl: raw.sourceUrl ?? null,
     sourceLicense: raw.sourceLicense ?? null,

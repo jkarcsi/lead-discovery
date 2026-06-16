@@ -37,6 +37,8 @@ export type LeadInput = {
   registrationNumber?: string | null;
   regionId?: string | null;
   categories: string[];
+  // Free-text categorization input, retained so the lead can be re-categorized later.
+  classificationText?: string | null;
   source: string;
   sourceUrl?: string | null;
   sourceLicense?: string | null;

@@ -22,6 +22,27 @@ describe("categorize", () => {
     expect(cats).toContain("cleaning");
     expect(cats).toContain("security");
   });
+
+  // Regression: the "it"/"support" keywords used to substring-match unrelated
+  // words, mis-filing pharmacies, bakeries and bike shops as IT. Short/generic
+  // tokens must match only as whole words.
+  it("does not mis-file -it words or 'support' compounds as IT", () => {
+    expect(categorize("pharmacy Margit Gyógyszertár")).not.toContain("it-support");
+    expect(categorize("Favorit Pékség Mintabolt")).not.toContain("it-support");
+    expect(categorize("West Fit Shop")).not.toContain("it-support");
+    expect(categorize("Fit-Boys kerékpárüzlet és szerviz")).not.toContain("it-support");
+    expect(categorize("Egészségügyi Szolgáltató Nonprofit Zrt.")).not.toContain("it-support");
+    expect(categorize("Bikesupport;Kerékpár szerviz")).not.toContain("it-support");
+  });
+
+  it("still recognizes genuine IT via whole-word 'it', stems and compounds", () => {
+    expect(categorize("Fővárosi IT Üzemeltető Zrt.")).toContain("it-support");
+    expect(categorize("IT-support szolgáltatás")).toContain("it-support");
+    expect(categorize("Unicomp Informatikai Kft.")).toContain("it-support");
+    expect(categorize("PC-Valkó Számítógép Szaküzlet")).toContain("it-support");
+    // Hungarian compounds still match the substring stems.
+    expect(categorize("klímaszerviz és fűtésszerelés")).toContain("hvac");
+  });
 });
 
 describe("detectRegion", () => {

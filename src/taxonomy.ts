@@ -5,39 +5,56 @@
 export type CategoryDef = {
   id: string;
   name: string;
+  // Stem/substring keywords: matched anywhere in the folded text so Hungarian
+  // compounds are caught (e.g. "irodatakarítás" matches "takarít"). Safe only for
+  // distinctive, longer stems — short or generic tokens belong in `wordKeywords`.
   keywords: string[];
+  // Whole-word keywords: matched only as standalone tokens (bounded left and
+  // right by a non-letter/digit). Use for short or ambiguous tokens that would
+  // otherwise hit unrelated words as substrings — e.g. "it" must not match
+  // "Margit"/"nonprofit"/"fit", and "support" must not match "Bikesupport".
+  wordKeywords?: string[];
 };
 
 export const CATEGORIES: CategoryDef[] = [
   {
     id: "cleaning",
     name: "Takarítás",
-    keywords: ["takarít", "takarit", "tisztít", "tisztit", "higién", "irodatakar", "clean", "janitor"],
+    keywords: ["takarít", "takarit", "tisztít", "tisztit", "higién", "irodatakar", "janitor"],
+    wordKeywords: ["clean", "cleaning"],
   },
   {
     id: "hvac",
     name: "HVAC / klíma karbantartás",
-    keywords: ["klíma", "klima", "hvac", "légkondi", "legkondi", "hűtés", "hutes", "futes", "fűtés", "szellőz", "szelloz", "air condition", "cooling", "heating", "ventilat"],
+    keywords: ["klíma", "klima", "légkondi", "legkondi", "hűtés", "hutes", "futes", "fűtés", "szellőz", "szelloz", "ventilat"],
+    wordKeywords: ["hvac", "air condition", "cooling", "heating"],
   },
   {
     id: "security",
     name: "Őrzés-védelem",
-    keywords: ["őrzés", "orzes", "biztonsági", "biztonsag", "vagyonvéd", "vagyonved", "portaszolgálat", "portaszolgalat", "beléptet", "beleptet", "security", "guard"],
+    keywords: ["őrzés", "orzes", "biztonsági", "biztonsag", "vagyonvéd", "vagyonved", "portaszolgálat", "portaszolgalat", "beléptet", "beleptet"],
+    wordKeywords: ["security", "guard"],
   },
   {
     id: "occupational-safety",
     name: "Munkavédelem",
-    keywords: ["munkavéd", "munkaved", "kockázatértékel", "kockazatertekel", "üzemorvos", "uzemorvos", "munkabiztons", "occupational safety", "workplace safety", "risk assessment"],
+    keywords: ["munkavéd", "munkaved", "kockázatértékel", "kockazatertekel", "üzemorvos", "uzemorvos", "munkabiztons"],
+    wordKeywords: ["occupational safety", "workplace safety", "risk assessment"],
   },
   {
     id: "fire-safety",
     name: "Tűzvédelem",
-    keywords: ["tűzvéd", "tuzved", "tűzoltó", "tuzolto", "tűzjelz", "tuzjelz", "menekülés", "menekules", "fire safety", "fire protection", "fire alarm", "extinguisher"],
+    keywords: ["tűzvéd", "tuzved", "tűzoltó", "tuzolto", "tűzjelz", "tuzjelz", "menekülés", "menekules"],
+    wordKeywords: ["fire safety", "fire protection", "fire alarm", "extinguisher"],
   },
   {
     id: "it-support",
     name: "IT üzemeltetés / support",
-    keywords: ["it ", "it-", "informatik", "rendszergazda", "support", "szerver", "server", "hálózat", "halozat", "network", "microsoft 365", "laptop", "sysadmin", "helpdesk"],
+    // Distinctive Hungarian/compound stems are safe as substrings…
+    keywords: ["informatik", "rendszergazda", "szerver", "hálózat", "halozat", "számítógép", "szamitogep", "számítástechnik", "szamitastechnik", "sysadmin", "helpdesk"],
+    // …but short/generic tokens must be whole words: "it" (not Margit/nonprofit),
+    // "support" (not Bikesupport), "server" (not observer).
+    wordKeywords: ["it", "support", "server", "network", "laptop", "microsoft 365"],
   },
 ];
 
