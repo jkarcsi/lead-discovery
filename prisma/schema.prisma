@@ -49,6 +49,14 @@ model Lead {
   navCheckedAt       DateTime?
   contactCheckedAt   DateTime? // Tier-2 contact-page enrichment
   placesCheckedAt    DateTime? // Tier-2 Google Places enrichment
+  // AI categorization provenance (IMPLEMENTATION_PLAN §9.1): set only for leads
+  // the rule-based categorizer couldn't place. Computed ONCE and stored so each
+  // business is never re-paid; (aiCategorizedAt, aiPromptVersion) gate re-runs —
+  // recompute only on a prompt/taxonomy version bump or a materially changed site.
+  aiCategorizedAt    DateTime?
+  aiConfidence       Float? // 0..1; below the threshold → held for manual review
+  aiModel            String? // e.g. "claude-haiku-4-5"
+  aiPromptVersion    String? // AI_PROMPT_VERSION at decision time
   auditEvents        AuditEvent[]
 
   @@index([regionId])

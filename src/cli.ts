@@ -16,6 +16,7 @@ import { verify } from "./pipeline/verify.js";
 import { navVerify } from "./pipeline/navVerify.js";
 import { enrichContacts } from "./pipeline/enrich.js";
 import { recategorize } from "./pipeline/recategorize.js";
+import { aiCategorize } from "./pipeline/aiCategorize.js";
 import { placesEnrich } from "./pipeline/placesEnrich.js";
 import { refresh } from "./pipeline/refresh.js";
 import { exportProcura } from "./pipeline/exportProcura.js";
@@ -259,6 +260,27 @@ async function cmdRecategorize(flags: Flags): Promise<void> {
   );
 }
 
+async function cmdAiCategorize(flags: Flags): Promise<void> {
+  const live = flags.live === true;
+  const dryRun = flags["dry-run"] === true;
+  const revalidate = flags.revalidate === true;
+  const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
+  console.log(
+    `AI-categorizing undetermined leads (${live ? "LIVE" : "fixture"} site text${dryRun ? ", dry-run" : ""})…`,
+  );
+  const s = await aiCategorize({ live, dryRun, revalidate, limit, log: (line) => console.log(line) });
+  if (s.skippedNoKey) {
+    console.log(
+      `Skipped: AI is disabled (set ANTHROPIC_API_KEY to enable). ${s.scanned} undetermined lead(s) left to the rules / manual review.`,
+    );
+    return;
+  }
+  console.log(
+    `${dryRun ? "[dry-run] " : ""}Scanned ${s.scanned}, submitted ${s.submitted}, ` +
+      `categorized ${s.categorized}, held for review ${s.lowConfidence}, no result ${s.noResult}.`,
+  );
+}
+
 async function cmdPurge(flags: Flags): Promise<void> {
   const dryRun = flags["dry-run"] === true;
   const stats = await purge({ dryRun });
@@ -418,6 +440,9 @@ Commands:
   refresh [--region <id|a,b|all>] [--live]     collect all sources + enrich
   report                                       coverage / enrichment dashboard
   recategorize [--dry-run] [--limit N]         recompute categories on stored leads
+  ai-categorize [--live] [--dry-run] [--limit N] [--revalidate]
+                                               classify rule-undetermined leads via
+                                               Claude Haiku (batch); needs ANTHROPIC_API_KEY
   export  [--out f.ndjson] [--min-quality N] [--approved] [--include-personal]
   dsar    <export|erase> <email>   data-subject access / erasure (GDPR)
   ropa    [--write]   print (or write docs/ROPA.md) the Art. 30 record
@@ -463,6 +488,9 @@ async function main(): Promise<void> {
       break;
     case "recategorize":
       await cmdRecategorize(flags);
+      break;
+    case "ai-categorize":
+      await cmdAiCategorize(flags);
       break;
     case "export":
       await cmdExport(flags);

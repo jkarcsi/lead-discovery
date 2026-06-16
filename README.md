@@ -92,11 +92,36 @@ npm run cli -- collect --source directory --region budapest       # paginated JS
 npm run cli -- collect --source htmldir   --region budapest       # paginated HTML source
 npm run cli -- collect --source overpass  --region budapest,pest  # several, concurrent
 npm run cli -- collect --source overpass  --region all --live     # full-country live crawl
+npm run cli -- ai-categorize --dry-run                            # size the AI residual (no key)
+npm run cli -- ai-categorize --live                               # classify the residual (needs a key)
 npm run cli -- stats
 ```
 
 Without `--live`, every connector reads `src/connectors/fixtures/`, so the
 pipeline runs fully offline. `--live` hits real endpoints (see **Live mode**).
+
+## AI categorization of undetermined leads
+
+Rule-based categorization (`src/lib/categorize.ts`) places most leads for free
+and is the only path that runs by default — it works **without** any API key.
+For the residual the rules can't place (`categories == []`), `ai-categorize`
+asks Claude to classify them from their name, listing, and a little scraped
+website text, the cheapest way possible (IMPLEMENTATION_PLAN §9.1):
+
+- **Claude Haiku 4.5** — the cheapest model, ample for short-text classification.
+- **Message Batches API** — 50% off; categorization is an offline, non-latency-
+  sensitive job, so the whole residual goes in one batch.
+- **Prompt caching** — the taxonomy + instructions + schema are a stable prefix.
+- **Structured outputs** — the response is constrained to the taxonomy enum, so
+  results are always in-taxonomy (no free-text parsing).
+- **Computed once and stored** — the decision (categories, confidence, model,
+  prompt version) is persisted on the Lead; re-run only with `--revalidate`
+  (e.g. after a prompt/taxonomy version bump). Low-confidence decisions are
+  recorded but held for **manual review** — never written to `categories` for
+  auto-outreach.
+
+Set `ANTHROPIC_API_KEY` to enable it; with no key the command is a clean no-op
+and the leads stay with the rules / manual review.
 
 ## Tuning (env)
 
@@ -104,14 +129,16 @@ pipeline runs fully offline. `--live` hits real endpoints (see **Live mode**).
 0 to disable), `FETCH_MAX_RETRIES` / `FETCH_BACKOFF_BASE_MS`, `FETCH_CACHE`,
 `WRITE_BATCH_SIZE`, `RESPECT_ROBOTS`, `OVERPASS_MIRRORS` (comma-separated
 fallback endpoints), `OVERPASS_URL` / `DIRECTORY_URL` / `HTML_DIRECTORY_URL`
-(live source endpoints). See `src/config.ts` and `.env.example`.
+(live source endpoints). AI categorization: `ANTHROPIC_API_KEY` (enables it),
+`AI_CATEGORIZE_MODEL`, `AI_CONFIDENCE_THRESHOLD`, `AI_BATCH_MAX_LEADS`. See
+`src/config.ts` and `.env.example`.
 
 ## Architecture
 
 ```
 sources → connectors → normalize → categorize → dedupe (in-memory plan)
         → batched store (createMany / txn) → Lead DB (SQLite dev / Postgres prod)
-        → export to Procura for matching
+        → ai-categorize (Haiku batch, the rule-residual only) → export to Procura
 ```
 
 Stack: Node + TypeScript + Prisma. The taxonomy and categorization mirror

@@ -50,6 +50,7 @@ merge across sources on the dedupe key (VAT → domain → name+region).
 | 10 | Website contact pages | Email / phone enrichment | ✅ `enrich` step |
 | 11 | Aranyoldalak / Telefonkönyv | Listings | ◻ generic paginated connector exists |
 | 12 | EVNY (sole traders) | Sole-trader coverage | ✅ `evny` (flag-gated) |
+| 13 | Website text + Claude Haiku | Categorize the rule-residual (low-cost AI) | ✅ `ai-categorize` step (key-gated) |
 
 ## Milestones
 
@@ -135,6 +136,26 @@ docs/ROPA.md           generated processing record
 6. Append a dated entry to the progress log.
 
 ## Progress log (newest first)
+
+### 2026-06-16
+
+- **Low-cost AI categorization of the rule-residual (Procura plan §9.1).** Rules
+  still place most leads for free at collection time; the new `ai-categorize`
+  step takes only the leads they couldn't place (`categories == []`) and asks
+  Claude to classify them the cheapest way possible: **Claude Haiku 4.5** via the
+  **Message Batches API** (50% off, one batch for the whole residual),
+  **prompt-caching** the taxonomy/instructions/schema prefix, and **structured
+  outputs** constrained to the taxonomy enum. The decision (categories,
+  confidence, model, prompt version) is **stored on the Lead** so each business
+  is categorized once and never re-paid (re-run only with `--revalidate`).
+  Low-confidence decisions are recorded but held for manual review — never
+  written to `categories` for auto-outreach. **Hard rule 4 preserved:** with no
+  `ANTHROPIC_API_KEY` (or no SDK installed) the step is a clean no-op and the
+  rest of the loop is unaffected. New: `src/lib/aiCategorize.ts` (pure prompt /
+  schema / parser, unit-tested), `src/pipeline/aiCategorize.ts` (batch + store),
+  `src/connectors/websiteText.ts` (scraped site text, live + fixture), Lead
+  fields `aiCategorizedAt`/`aiConfidence`/`aiModel`/`aiPromptVersion`. 148 tests
+  green.
 
 ### 2026-06-15
 

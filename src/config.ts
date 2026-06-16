@@ -53,6 +53,24 @@ export const config = {
   // DB write batch size for bulk inserts.
   writeBatchSize: Number(process.env.WRITE_BATCH_SIZE || 500),
 
+  // --- Low-cost AI categorization of undetermined leads (IMPLEMENTATION_PLAN §9.1) ---
+  // Rules place most leads for free; AI touches only the residual the rules
+  // can't, at the cheapest path (Haiku 4.5 + Batch API 50% + prompt caching +
+  // structured outputs), computed once and stored. The full loop works WITHOUT a
+  // key — no key just means the AI step is a no-op (hard rule 4).
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
+  aiModel: process.env.AI_CATEGORIZE_MODEL || "claude-haiku-4-5",
+  // Output cap per lead: a classification into six buckets is tiny.
+  aiMaxTokens: Number(process.env.AI_MAX_TOKENS || 512),
+  // Below this confidence, an AI decision is recorded but held for manual review
+  // — never written to `categories` for auto-outreach.
+  aiConfidenceThreshold: Number(process.env.AI_CONFIDENCE_THRESHOLD || 0.6),
+  // Cap leads submitted per batch run (Batch API allows up to 100k; bound runs).
+  aiBatchMaxLeads: Number(process.env.AI_BATCH_MAX_LEADS || 500),
+  // Poll cadence and ceiling while a batch completes (most finish < 1h, max 24h).
+  aiBatchPollIntervalMs: Number(process.env.AI_BATCH_POLL_INTERVAL_MS || 10000),
+  aiBatchTimeoutMs: Number(process.env.AI_BATCH_TIMEOUT_MS || 24 * 60 * 60 * 1000),
+
   // --- Optional operator utilities (retention / review windows) ---
   personalDataRetentionDays: Number(process.env.PERSONAL_DATA_RETENTION_DAYS || 365),
   outreachEnabled: process.env.OUTREACH_ENABLED === "true",
@@ -60,4 +78,10 @@ export const config = {
   controllerContact: process.env.ROPA_CONTROLLER_CONTACT || "ops@procura.hu",
   controllerDpo: process.env.ROPA_DPO_CONTACT || "n/a",
 };
+
+// AI categorization is opt-in via an API key. Without one the rule-based path
+// still runs and the rest of the loop is unaffected (hard rule 4).
+export function aiEnabled(): boolean {
+  return config.anthropicApiKey.trim().length > 0;
+}
 
