@@ -187,6 +187,94 @@ integration.
 | `RESPECT_ROBOTS` | `false` | Honor robots.txt (operator's choice). |
 | `EVNY_ENABLED` | `false` | Enable the sole-trader connector (personal data). |
 
+## Running in production (scheduling)
+
+The data is not static — businesses appear, websites change, VAT/tax status
+updates. Run the pipeline on a recurring schedule, not once.
+
+### Recommended cadence
+
+| What | Command | How often | Why |
+|---|---|---|---|
+| Full collect + enrich + export | `refresh.sh full` | monthly | OSM/registries change slowly; one full pass refreshes coverage |
+| Email/phone top-up | `refresh.sh enrich` | weekly | re-scans sites that were down before; resumable |
+| VAT / tax status | `refresh.sh verify` | quarterly | VIES/NAV statuses change slowly |
+| Retention purge | `refresh.sh purge` | daily | GDPR: drop expired personal data on time |
+| Re-categorize | `recategorize` | only after a taxonomy/keyword change | the ingest merge *unions* categories, so a keyword fix needs an explicit recompute |
+| Export to Procura | in `full`, or `export` | before each outreach campaign | feed matching with fresh, vetted leads |
+
+### The scheduling script
+
+`scripts/refresh.sh <task>` wraps a cycle: it takes a single-instance lock (no
+overlapping runs), logs to `logs/<task>-<date>.log`, writes NDJSON to `exports/`,
+and runs the right CLI steps. Env overrides: `REGION` (default `all`),
+`FETCH_CONCURRENCY` (default 12), `MIN_QUALITY` (export threshold, default 40).
+
+```bash
+scripts/refresh.sh full      # collect all sources + enrich, then report, export, purge
+scripts/refresh.sh enrich    # only website contact scraping (resumable)
+scripts/refresh.sh verify    # VIES + NAV
+scripts/refresh.sh purge     # retention only
+```
+
+### cron (Linux / WSL)
+
+cron runs with a bare `PATH`, so make node/npm visible. Find their dir with
+`dirname "$(command -v npm)"`, then `crontab -e`:
+
+```cron
+PATH=/usr/local/bin:/usr/bin:/bin    # adjust to your `dirname $(command -v npm)`
+REPO=/abs/path/to/lead-discovery
+
+0 3 1 * *        $REPO/scripts/refresh.sh full      # monthly full pass, 03:00 on the 1st
+0 4 * * 1        $REPO/scripts/refresh.sh enrich    # weekly email top-up, Mon 04:00
+0 2 * * *        $REPO/scripts/refresh.sh purge     # daily retention, 02:00
+0 5 1 1,4,7,10 * $REPO/scripts/refresh.sh verify    # quarterly VIES/NAV
+```
+
+Watch a run: `tail -f logs/full-$(date +%F).log`.
+
+### systemd timer (alternative to cron)
+
+`/etc/systemd/system/lead-refresh.service`:
+```ini
+[Service]
+Type=oneshot
+WorkingDirectory=/abs/path/to/lead-discovery
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/abs/path/to/lead-discovery/scripts/refresh.sh full
+```
+`/etc/systemd/system/lead-refresh.timer`:
+```ini
+[Timer]
+OnCalendar=monthly
+Persistent=true
+[Install]
+WantedBy=timers.target
+```
+Enable: `sudo systemctl enable --now lead-refresh.timer`.
+
+### Windows (Task Scheduler)
+
+The script is bash; on Windows run it through WSL:
+```
+schtasks /Create /TN lead-refresh /SC MONTHLY /D 1 /ST 03:00 ^
+  /TR "wsl bash -lc '/abs/path/to/lead-discovery/scripts/refresh.sh full'"
+```
+
+### Production notes
+
+- **Database.** SQLite is fine for dev; for production point the Prisma datasource
+  at Postgres (`provider = "postgresql"`, set `DATABASE_URL`) — it handles
+  concurrent writes better. No other schema change needed.
+- **Overpass reachability.** Schedule on a host with IPv6, or rely on
+  `OVERPASS_MIRRORS` (the default): `overpass-api.de` is IPv6-only.
+- **`enrich` is the long pole** (it visits every lead's website) and is resumable
+  via `contactCheckedAt` — a killed or timed-out run simply continues next time.
+  Let `full`/`enrich` run to completion in the background; the lock prevents
+  overlap. Tune `FETCH_CONCURRENCY` / `FETCH_TIMEOUT_MS` for your network.
+- **Logs/exports** are gitignored — rotate or prune them periodically.
+
 ## Troubleshooting
 
 - **`429` / `504` from Overpass under `--region all --live`.** The per-host

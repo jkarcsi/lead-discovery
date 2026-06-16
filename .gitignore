@@ -5,3 +5,7 @@ dist
 *.db-journal
 prisma/dev.db
 .DS_Store
+
+# Scheduled-run artifacts (scripts/refresh.sh)
+logs/
+exports/
