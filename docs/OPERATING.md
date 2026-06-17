@@ -29,6 +29,12 @@ ebeszamolo │                              nav    (tax status)                 
 - **Categorization** runs during collection (authoritative TEÁOR/CPV codes +
   keyword text) and again at `enrich` (website text). After changing keywords,
   run `recategorize` to re-apply them to already-stored leads.
+- **`ai-categorize`** is the last-resort classifier: for leads that *still* have
+  no category but do have website text, Claude Haiku reads the text and picks
+  taxonomy categories (via the Batches API — 50% cheaper, structured outputs
+  constrained to the taxonomy). The decision is stored on the lead so it runs
+  once. High-confidence picks are applied; low-confidence ones are recorded for
+  manual `review` and never auto-applied (so they can't drive cold outreach).
 
 So: discovery gives websites; `enrich` turns websites into emails **and**
 categories. Running only `collect --source overpass` (discovery) is why you saw
@@ -72,11 +78,14 @@ npm run cli -- enrich --live
 # 4. (optional) Fill remaining phone/website/address from Google Places (needs a key).
 npm run cli -- places --live
 
-# 5. (optional) Validate VAT / tax status.
+# 5. (optional) AI-classify leads the rules + website text still left empty (needs a key).
+npm run cli -- ai-categorize --live
+
+# 6. (optional) Validate VAT / tax status.
 npm run cli -- verify --live      # EU VIES
 npm run cli -- nav    --live      # NAV tax status
 
-# 6. Inspect coverage, then export the emailable, categorized leads.
+# 7. Inspect coverage, then export the emailable, categorized leads.
 npm run cli -- report
 npm run cli -- export --min-quality 40 --out procura-export.ndjson
 ```
@@ -103,6 +112,8 @@ missing the relevant field (`--revalidate` re-checks already-checked ones).
 | `places` | no (all leads) | yes | `--limit N`, `--revalidate` | Phone/website/address from Google Places |
 | `verify` | no (all leads) | yes | `--limit N`, `--revalidate` | VAT validation via EU VIES |
 | `nav` | no (all leads) | yes | `--limit N`, `--revalidate` | Tax status via NAV |
+| `ai-categorize` | no (all leads) | yes | `--limit N`, `--revalidate` | Classify leftover website text via Claude Haiku |
+| `recategorize` | no | — | `--dry-run`, `--limit N` | Recompute categories after a keyword change |
 | `report` | no | — | — | Coverage / enrichment dashboard |
 | `export` | no | — | `--out`, `--min-quality N`, `--approved`, `--include-personal` | NDJSON to Procura |
 | `list` | filter | — | `--category`, `--min-quality N`, `--limit N` | Inspect leads |
@@ -125,6 +136,7 @@ the whole lead table for rows missing the field they fill.
 | `verify` (VIES) | ✅ yes | Public EU endpoint, no key. |
 | `ebeszamolo`, `mkik`, `opencorporates`, `kozbeszerzes`, `nav` | ⚠ endpoint/credentials | Default to official URLs; several need an API key/registration before they return data. Verify the URL + auth for each. |
 | `places` | ⚠ key required | Needs a Google Places API key and the request shape wired to your account. |
+| `ai-categorize` | ⚠ key required | Needs `ANTHROPIC_API_KEY` (Claude Haiku via the Batches API). Offline it reads a fixture. Fails fast live without a key; `refresh` skips it. |
 | `directory`, `htmldir` | ❌ no public default | Generic "bring-your-own-listing" connectors — see below. |
 | `evny` (sole traders) | 🔒 gated | `EVNY_ENABLED=true` required; records are personal data. |
 
@@ -192,6 +204,8 @@ integration.
 | `WRITE_BATCH_SIZE` | `500` | DB bulk-insert batch size. |
 | `RESPECT_ROBOTS` | `false` | Honor robots.txt (operator's choice). |
 | `EVNY_ENABLED` | `false` | Enable the sole-trader connector (personal data). |
+| `ANTHROPIC_API_KEY` | — | Required for `ai-categorize --live` (Claude Haiku). |
+| `AI_CATEGORIZE_MODEL` | `claude-haiku-4-5` | Model for AI categorization. |
 
 ## Running in production (scheduling)
 
@@ -204,6 +218,7 @@ updates. Run the pipeline on a recurring schedule, not once.
 |---|---|---|---|
 | Full collect + enrich + export | `refresh.sh full` | monthly | OSM/registries change slowly; one full pass refreshes coverage |
 | Email/phone top-up | `refresh.sh enrich` | weekly | re-scans sites that were down before; resumable |
+| AI categorization | `ai-categorize` (in `full` when keyed) | monthly | classifies leftover website text; computed once per lead, costs API tokens |
 | VAT / tax status | `refresh.sh verify` | quarterly | VIES/NAV statuses change slowly |
 | Retention purge | `refresh.sh purge` | daily | GDPR: drop expired personal data on time |
 | Re-categorize | `recategorize` | only after a taxonomy/keyword change | the ingest merge *unions* categories, so a keyword fix needs an explicit recompute |

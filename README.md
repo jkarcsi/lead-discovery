@@ -47,14 +47,16 @@ minimize wasted round-trips, and keep crawls resilient and idempotent. See
   `directory`; an HTML `htmldir`; chamber registry `mkik`; aggregator
   `opencorporates`; public procurement `kozbeszerzes` (CPV→taxonomy); sole-trader
   `evny` (flag-gated, personal data). Enrichment: EU VIES `verify`, NAV `nav`,
-  website contact pages `enrich`, Google Places `places`. Overlapping businesses
-  merge across sources on the dedupe key (VAT → registration number → domain →
-  name+region).
+  website contact pages `enrich`, Google Places `places`, and `ai-categorize`
+  (Claude Haiku classifies website text the keyword rules missed). Overlapping
+  businesses merge across sources on the dedupe key (VAT → registration number →
+  domain → name+region).
 - Pipeline: concurrent multi-region `ingest` → batched `store`
 - Operator CLI: `collect` / `refresh` (all sources + enrich) / `verify` (VIES) /
   `nav` (tax-status) / `enrich` (contact pages) / `places` (Google Places) /
-  `review` / `report` (dashboard) / `export` (NDJSON → Procura) / `list` /
-  `stats` / `suppress` / `dsar` / `ropa` / `purge`
+  `ai-categorize` (Claude Haiku) / `recategorize` / `review` / `report`
+  (dashboard) / `export` (NDJSON → Procura) / `list` / `stats` / `suppress` /
+  `dsar` / `ropa` / `purge`
 
 ### Live mode
 
@@ -77,6 +79,8 @@ What that needs per source:
   saying exactly which env var to set (rather than an opaque "fetch failed").
 - The registry/enrichment steps (`ebeszamolo`, `nav`, `places`, …) default to
   the official endpoints; some need credentials/keys before they return data.
+- **`ai-categorize`** works live with an `ANTHROPIC_API_KEY` (Claude Haiku via
+  the Batches API); offline it reads a fixture so the pipeline stays key-free.
 
 Roadmap and progress: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 

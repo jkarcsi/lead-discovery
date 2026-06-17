@@ -16,6 +16,7 @@ import { verify } from "./pipeline/verify.js";
 import { navVerify } from "./pipeline/navVerify.js";
 import { enrichContacts } from "./pipeline/enrich.js";
 import { recategorize } from "./pipeline/recategorize.js";
+import { aiCategorize } from "./pipeline/aiCategorize.js";
 import { placesEnrich } from "./pipeline/placesEnrich.js";
 import { refresh } from "./pipeline/refresh.js";
 import { exportProcura } from "./pipeline/exportProcura.js";
@@ -261,6 +262,24 @@ async function cmdRecategorize(flags: Flags): Promise<void> {
   );
 }
 
+async function cmdAiCategorize(flags: Flags): Promise<void> {
+  const live = flags.live === true;
+  const limit = str(flags, "limit") ? Number(str(flags, "limit")) : undefined;
+  const revalidate = flags.revalidate === true;
+  console.log(`AI-categorizing uncategorized website text (${live ? "LIVE" : "fixture"})…`);
+  const s = await aiCategorize({
+    live,
+    limit,
+    revalidate,
+    onPoll: (p) =>
+      console.log(`  batch ${p.status}: ${p.done}/${p.total} done · ${(p.elapsedMs / 1000).toFixed(0)}s`),
+  });
+  console.log(
+    `Done: scanned ${s.scanned}, categorized ${s.categorized} (high-confidence), ` +
+      `${s.lowConfidence} low-confidence (for review), ${s.none} no category.`,
+  );
+}
+
 async function cmdPurge(flags: Flags): Promise<void> {
   const dryRun = flags["dry-run"] === true;
   const stats = await purge({ dryRun });
@@ -334,7 +353,7 @@ async function cmdRefresh(flags: Flags): Promise<void> {
   });
   console.log(
     `Enrichment: VIES ${s.verified}, NAV ${s.navChecked}, contacts ${s.contactsEnriched}, ` +
-      `places ${s.placesEnriched}.`,
+      `places ${s.placesEnriched}, AI-categorized ${s.aiCategorized}.`,
   );
 }
 
@@ -420,6 +439,7 @@ Commands:
   refresh [--region <id|a,b|all>] [--live]     collect all sources + enrich
   report                                       coverage / enrichment dashboard
   recategorize [--dry-run] [--limit N]         recompute categories on stored leads
+  ai-categorize [--live] [--limit N] [--revalidate]  classify leftover website text via Claude Haiku
   export  [--out f.ndjson] [--min-quality N] [--approved] [--include-personal]
   dsar    <export|erase> <email>   data-subject access / erasure (GDPR)
   ropa    [--write]   print (or write docs/ROPA.md) the Art. 30 record
@@ -465,6 +485,9 @@ async function main(): Promise<void> {
       break;
     case "recategorize":
       await cmdRecategorize(flags);
+      break;
+    case "ai-categorize":
+      await cmdAiCategorize(flags);
       break;
     case "export":
       await cmdExport(flags);

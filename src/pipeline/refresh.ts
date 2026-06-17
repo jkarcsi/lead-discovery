@@ -10,6 +10,7 @@ import { verify } from "./verify.js";
 import { navVerify } from "./navVerify.js";
 import { enrichContacts, type EnrichOptions } from "./enrich.js";
 import { placesEnrich } from "./placesEnrich.js";
+import { aiCategorize } from "./aiCategorize.js";
 
 export type RefreshOptions = {
   regionIds: string[];
@@ -27,6 +28,7 @@ export type RefreshStats = {
   navChecked: number;
   contactsEnriched: number;
   placesEnriched: number;
+  aiCategorized: number;
 };
 
 export async function refresh(opts: RefreshOptions): Promise<RefreshStats> {
@@ -53,11 +55,23 @@ export async function refresh(opts: RefreshOptions): Promise<RefreshStats> {
   log("enriching from Google Places…");
   const p = await placesEnrich({ live });
 
+  // AI categorization runs last (it needs the website text enrich just gathered).
+  // Live mode needs an API key; skip it on a keyless live run rather than crash.
+  let aiCategorized = 0;
+  if (!live || config.anthropicApiKey) {
+    log("AI-categorizing leftover website text…");
+    const a = await aiCategorize({ live });
+    aiCategorized = a.categorized;
+  } else {
+    log("skipping AI categorization (no ANTHROPIC_API_KEY set)");
+  }
+
   return {
     sources: perSource,
     verified: v.valid,
     navChecked: n.checked,
     contactsEnriched: e.enriched,
     placesEnriched: p.enriched,
+    aiCategorized,
   };
 }

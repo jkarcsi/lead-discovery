@@ -50,6 +50,16 @@ merge across sources on the dedupe key (VAT → domain → name+region).
 | 10 | Website contact pages | Email / phone enrichment | ✅ `enrich` step |
 | 11 | Aranyoldalak / Telefonkönyv | Listings | ◻ generic paginated connector exists |
 | 12 | EVNY (sole traders) | Sole-trader coverage | ✅ `evny` (flag-gated) |
+| 13 | Website text (own pages) | **Primary** categorize/contact source | ✅ `enrich` (text→category) + `ai-categorize` (Haiku) |
+
+> **Wider product context.** This collection engine feeds a larger plan —
+> categorized leads → RFQ matching → compliant cold invites → registration (the
+> growth loop). That design (legal basis, the cold-invite loop, the AI-path
+> rationale) lives in
+> [`docs/lead-discovery-plan-in-procurement-network.md`](docs/lead-discovery-plan-in-procurement-network.md);
+> its §4 Tier-2 and the AI categorization design are realized here (see
+> **AI-assisted categorization** below). Outreach and its legal gating are out of
+> scope for this repo — collection only.
 
 ## Milestones
 
@@ -70,10 +80,39 @@ merge across sources on the dedupe key (VAT → domain → name+region).
   flagged personal data; `EVNY_ENABLED=true` required.
 - ✅ **M3 — Scale & operate:** `refresh` (collect all sources + enrich in one
   command), `report` (coverage/enrichment dashboard), `export` (NDJSON to Procura).
+- ✅ **M4 — Website-text categorization:** `enrich` re-categorizes from a lead's
+  own page text; `ai-categorize` (Claude Haiku) classifies what the rules still
+  miss. The plan doc's §4 Tier-2 ("website as a primary source") realized here.
 
 **Operator utilities** (shipped, maintained but not the focus): `verify` (VIES),
 `review` (manual approve/reject queue), `suppress`/`purge` (do-not-collect +
 retention), `dsar` (access/erasure), `ropa` (generated Art. 30 record).
+
+## AI-assisted categorization (the plan's §9.1, realized)
+
+Most discovered businesses don't carry a TEÁOR/CPV code and their name/OSM tags
+rarely contain a category keyword — so the rule-based categorizer leaves them
+empty even when their own website states plainly what they do. The fix has two
+tiers, both free of any third-party platform:
+
+1. **Rules over website text (`enrich`).** The contact-page fetch also extracts a
+   bounded "what we do" signal (title/meta/headings) into `classificationText`
+   and unions any keyword matches — free, no API.
+2. **AI over the leftovers (`ai-categorize`).** For leads still empty but with
+   website text, Claude **Haiku 4.5** classifies the text into the taxonomy. The
+   cheapest defensible AI path:
+   - **Message Batches API** — async, 50% off, sized for thousands of leads.
+   - **Structured outputs** constrained to the taxonomy enum (the model cannot
+     invent a category); a stable, cacheable system-prompt prefix.
+   - **Computed once** — the decision is stored on the lead (`aiCheckedAt`,
+     `aiCategories`, `aiConfidence`); re-runs skip already-processed leads.
+   - **Confidence-gated** — high-confidence picks are applied to `categories`;
+     **low-confidence picks are recorded for manual `review` and never
+     auto-applied**, so they can't drive cold outreach.
+
+Pure logic (`lib/aiCategorize.ts`: prompt, schema, parsing) is I/O-free and
+unit-tested; the client (`connectors/aiClient.ts`) runs offline from a fixture so
+the whole pipeline stays key-free in tests. Live mode needs `ANTHROPIC_API_KEY`.
 
 ## Engineering conventions
 
@@ -111,10 +150,10 @@ prisma/schema.prisma   Lead / Suppression / AuditEvent / CrawlState
 src/taxonomy.ts        Procura-aligned categories + regions
 src/lib/               pure, tested: parsers, concurrency, paginate, dedupe,
                        quality, …; + side-effecting fetcher
-src/connectors/        overpass, directory, htmldir, ebeszamolo
-                       + paginated.ts factory + offline fixtures
-src/pipeline/          ingest (concurrent) → store (batched); verify, review,
-                       purge, dsar, crawlState
+src/connectors/        overpass, directory, htmldir, ebeszamolo, … + aiClient
+                       (Claude Haiku batch) + paginated.ts factory + fixtures
+src/pipeline/          ingest (concurrent) → store (batched); enrich, places,
+                       verify, nav, aiCategorize, recategorize, review, purge, dsar
 src/cli.ts             operator CLI
 tests/                 vitest unit tests
 docs/OPERATING.md      operator runbook (live run order, command reference)
@@ -135,6 +174,22 @@ docs/ROPA.md           generated processing record
 6. Append a dated entry to the progress log.
 
 ## Progress log (newest first)
+
+### 2026-06-17
+
+- **M4 — AI categorization (plan §4 Tier-2 / §9.1).** Added `ai-categorize`:
+  Claude **Haiku 4.5** classifies the website text of leads the rules couldn't,
+  via the **Batches API** with **structured outputs** locked to the taxonomy
+  enum and a cacheable prompt prefix. The decision is stored on the lead
+  (`aiCheckedAt` / `aiCategories` / `aiConfidence`) so it runs once; high-
+  confidence picks apply, low-confidence ones go to manual review and never
+  auto-apply. Pure logic (`lib/aiCategorize.ts`) + offline fixture client
+  (`connectors/aiClient.ts`) keep tests key-free; `refresh` runs it last and
+  skips it on a keyless live run. Integrated the separate plan doc's relevant
+  parts into this plan (Tier-2 promotion, growth-loop context, AI design). New
+  dep `@anthropic-ai/sdk`. 150 tests green. Smoke: a fire-safety site with no
+  keyword in its name was applied as `fire-safety`; a low-confidence pick was
+  recorded for review without being applied.
 
 ### 2026-06-15
 

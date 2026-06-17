@@ -47,6 +47,16 @@ export const config = {
   // EVNY (sole-trader registry) is sensitive personal data — collection is OFF
   // unless the operator explicitly enables it.
   evnyEnabled: process.env.EVNY_ENABLED === "true",
+
+  // --- AI categorization (Claude Haiku via the Batches API) ---
+  // Classifies website text the rule-based categorizer couldn't. Live mode needs
+  // an API key; offline it reads a fixture so tests stay key-free. Haiku 4.5 is
+  // the cheapest model that supports structured outputs (the taxonomy enum).
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
+  aiModel: process.env.AI_CATEGORIZE_MODEL || "claude-haiku-4-5",
+  // Poll interval / ceiling while waiting for an async batch to finish.
+  aiPollIntervalMs: Number(process.env.AI_POLL_INTERVAL_MS || 10000),
+  aiPollMaxMs: Number(process.env.AI_POLL_MAX_MS || 24 * 60 * 60 * 1000),
   // Honor robots.txt only when explicitly asked (operator's call; off by default
   // so collection isn't blocked — usage legality is handled separately).
   respectRobots: process.env.RESPECT_ROBOTS === "true",

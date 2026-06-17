@@ -1,0 +1,5 @@
+{
+  "Lánghír Tűzmegelőzési Iroda": { "categories": ["fire-safety"], "confidence": "high" },
+  "Aprajafalva Bisztró": { "categories": ["none"], "confidence": "high" },
+  "Homály Tanácsadó Kft.": { "categories": ["cleaning"], "confidence": "low" }
+}

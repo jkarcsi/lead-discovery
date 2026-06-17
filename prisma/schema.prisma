@@ -49,6 +49,13 @@ model Lead {
   navCheckedAt       DateTime?
   contactCheckedAt   DateTime? // Tier-2 contact-page enrichment
   placesCheckedAt    DateTime? // Tier-2 Google Places enrichment
+  // AI categorization (Claude Haiku) of website text the rules couldn't classify.
+  // Computed once per lead (aiCheckedAt is the marker). aiCategories holds the
+  // model's suggestion even when confidence is low (those are left for review and
+  // never auto-applied); high-confidence suggestions are written to `categories`.
+  aiCheckedAt        DateTime?
+  aiCategories       String? // JSON array of suggested category ids
+  aiConfidence       String? // "high" | "low"
   auditEvents        AuditEvent[]
 
   @@index([regionId])
