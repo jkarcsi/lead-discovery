@@ -134,7 +134,8 @@ the whole lead table for rows missing the field they fill.
 | `overpass` | ✅ yes | Public Overpass API + mirror fallback. `overpass-api.de` is IPv6-only — on an IPv4-only host rely on `OVERPASS_MIRRORS` or set `OVERPASS_URL` to a mirror. |
 | `enrich` | ✅ yes | Fetches each lead's own website; no endpoint to configure. Needs leads that already have a `website`. |
 | `verify` (VIES) | ✅ yes | Public EU endpoint, no key. |
-| `ebeszamolo`, `mkik`, `opencorporates`, `kozbeszerzes`, `nav` | ⚠ endpoint/credentials | Default to official URLs; several need an API key/registration before they return data. Verify the URL + auth for each. |
+| `ebeszamolo` (company registry) | 🔒 licence required | The free e-cegjegyzek.hu lookup is CAPTCHA-gated and its ToS **forbids automated/bulk access**. Bulk data needs a usage agreement with the Céginformációs Szolgálat (ceginformaciosszolgalat.kormany.hu) or a licensed API (cegadatapi.hu / OPTEN). Set `EBESZAMOLO_URL` to your contracted endpoint **and** `EBESZAMOLO_LICENSED=true`; otherwise live fails fast. We never scrape the CAPTCHA-gated site. |
+| `mkik`, `opencorporates`, `kozbeszerzes`, `nav` | ⚠ endpoint/credentials | Default to official URLs; several need an API key/registration before they return data. Verify the URL + auth for each. |
 | `places` | ⚠ key required | Needs a Google Places API key and the request shape wired to your account. |
 | `ai-categorize` | ⚠ key required | Needs `ANTHROPIC_API_KEY` (Claude Haiku via the Batches API). Offline it reads a fixture. Fails fast live without a key; `refresh` skips it. |
 | `directory`, `htmldir` | ❌ no public default | Generic "bring-your-own-listing" connectors — see below. |

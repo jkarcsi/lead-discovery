@@ -18,7 +18,14 @@ export const config = {
     "https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number",
   directoryUrl: process.env.DIRECTORY_URL || "https://example-directory.test/api",
   htmlDirectoryUrl: process.env.HTML_DIRECTORY_URL || "https://example-listing.test",
-  ebeszamoloUrl: process.env.EBESZAMOLO_URL || "https://e-beszamolo.im.gov.hu/api",
+  // Company registry (Céginformációs Szolgálat / e-beszámoló). The free
+  // e-cegjegyzek.hu lookup is CAPTCHA-gated and its ToS forbids automated/bulk
+  // access — bulk data requires a usage agreement (contract) or a licensed API
+  // (e.g. Cégadat API). Set EBESZAMOLO_URL to your contracted endpoint and
+  // EBESZAMOLO_LICENSED=true to confirm you may collect it. Default is a
+  // placeholder so an unconfigured live run fails fast.
+  ebeszamoloUrl: process.env.EBESZAMOLO_URL || "https://your-licensed-cegadat-endpoint.invalid/api",
+  ebeszamoloLicensed: process.env.EBESZAMOLO_LICENSED === "true",
   evnyUrl: process.env.EVNY_URL || "https://www.nyilvantarto.hu/evny/api",
   navUrl: process.env.NAV_URL || "https://api.nav.gov.hu/taxpayer",
   kozbeszerzesUrl: process.env.KOZBESZERZES_URL || "https://ekr.gov.hu/api/ertesito",

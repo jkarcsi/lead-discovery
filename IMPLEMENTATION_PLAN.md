@@ -175,6 +175,20 @@ docs/ROPA.md           generated processing record
 
 ## Progress log (newest first)
 
+### 2026-06-17 (later)
+
+- **Company-registry licence gate (e-cegjegyzek).** Investigated bulk access to
+  e-cegjegyzek.hu: no robots.txt, JS-rendered, and the Céginformációs Szolgálat
+  ToS **explicitly forbids automated/bulk access (data scraping)** and AI/ML
+  training without a usage agreement; the free lookup is CAPTCHA-gated. So bulk
+  data is legitimate only via a **contract** with the Céginformációs Szolgálat or
+  a **licensed API** (cegadatapi.hu / OPTEN). Fix: added a `licence` gate to the
+  paginated factory — the `ebeszamolo` connector now refuses live collection
+  unless `EBESZAMOLO_LICENSED=true` and a real `EBESZAMOLO_URL` are set, failing
+  fast with a message that points at the official channels. We never bypass the
+  CAPTCHA. Default endpoint is now a placeholder. Tests + .env + OPERATING
+  updated. 152 tests green.
+
 ### 2026-06-17
 
 - **M4 — AI categorization (plan §4 Tier-2 / §9.1).** Added `ai-categorize`:
