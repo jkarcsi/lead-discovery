@@ -204,7 +204,8 @@ async function cmdEnrich(flags: Flags): Promise<void> {
   const s = await enrichContacts({ live, limit, revalidate, onProgress: progressLogger() });
   console.log(
     `Done: scanned ${s.scanned}, enriched ${s.enriched} ` +
-      `(+${s.emailsAdded} email, +${s.phonesAdded} phone), skipped ${s.skipped}.`,
+      `(+${s.emailsAdded} email, +${s.phonesAdded} phone, +${s.categoriesAdded} category), ` +
+      `skipped ${s.skipped}.`,
   );
 }
 
@@ -215,6 +216,7 @@ function progressLogger(): (p: {
   enriched: number;
   emailsAdded: number;
   phonesAdded: number;
+  categoriesAdded: number;
   skipped: number;
   total: number;
   elapsedMs: number;
@@ -229,8 +231,8 @@ function progressLogger(): (p: {
     const width = String(p.total).length;
     console.log(
       `  [${String(p.scanned).padStart(width)}/${p.total}] ` +
-        `+${p.emailsAdded} email, +${p.phonesAdded} phone, ${p.skipped} no-page · ` +
-        `${secs.toFixed(0)}s elapsed, ~${eta}s left`,
+        `+${p.emailsAdded} email, +${p.phonesAdded} phone, +${p.categoriesAdded} cat, ` +
+        `${p.skipped} no-page · ${secs.toFixed(0)}s elapsed, ~${eta}s left`,
     );
   };
 }

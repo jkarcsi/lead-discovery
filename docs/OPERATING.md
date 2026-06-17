@@ -11,22 +11,28 @@ The system is a **multi-source pipeline**, not a single web crawler. A lead is
 built up in layers, and the email almost never comes from the discovery layer:
 
 ```
-DISCOVERY            DEDUPE                ENRICHMENT (email!)      CATEGORIZE        EXPORT
-overpass  ─┐                              enrich  (website → email) TEÁOR/CPV codes
-directory  ├─►  merge on dedupe key  ─►   places  (Places → phone)  + keyword text ─► report → export
-htmldir    │    VAT→regno→domain→name     verify  (VIES VAT)                          (NDJSON →
-ebeszamolo │                              nav     (tax status)                          Procura)
-…sources  ─┘
+DISCOVERY            DEDUPE                ENRICHMENT (email + category!)    EXPORT
+overpass  ─┐                              enrich (website → email + category)
+directory  ├─►  merge on dedupe key  ─►   places (Places → phone)         ─► report → export
+htmldir    │    VAT→regno→domain→name     verify (VIES VAT)                   (NDJSON →
+ebeszamolo │                              nav    (tax status)                  Procura)
+…sources  ─┘    categorize: TEÁOR/CPV codes + name/tags + website text
 ```
 
 - **Discovery** finds who exists and, crucially, their **website**.
 - **`enrich`** opens each lead's website (`/`, `/kapcsolat`, `/impresszum`,
   `/contact`) and scrapes the **email** + phone. This is the main email engine.
-- **Categorization** runs automatically during collection — from authoritative
-  TEÁOR/CPV codes where available, unioned with keyword matches.
+  It *also re-categorizes* the lead from the page's own text (title/meta/headings):
+  a site that says "tűzvédelmi szaktanácsadás" gets `fire-safety` even when its
+  name and OSM tags carry no keyword. So `enrich` now visits a lead if it is
+  missing a contact **or** still has no category.
+- **Categorization** runs during collection (authoritative TEÁOR/CPV codes +
+  keyword text) and again at `enrich` (website text). After changing keywords,
+  run `recategorize` to re-apply them to already-stored leads.
 
-So: discovery gives websites, `enrich` turns websites into emails. Running only
-`collect --source overpass` (discovery) is why you saw "few emails".
+So: discovery gives websites; `enrich` turns websites into emails **and**
+categories. Running only `collect --source overpass` (discovery) is why you saw
+"few emails" and many uncategorized leads — `enrich` is what fills both.
 
 ## One-time setup
 

@@ -8,6 +8,12 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { politeGet } from "../lib/fetcher.js";
 import { extractContacts, type Contacts } from "../lib/contactExtract.js";
+import { extractCategoryText } from "../lib/html.js";
+
+// Contacts plus a bounded excerpt of the page's text, so enrichment can also
+// re-categorize a lead from what its own website says it does (free signal that
+// the thin OSM tags / name often lack).
+export type FetchedContacts = Contacts & { text: string };
 
 const here = dirname(fileURLToPath(import.meta.url));
 const CONTACT_PATHS = ["", "/kapcsolat", "/impresszum", "/contact"];
@@ -20,12 +26,14 @@ const SCRAPE_OPTS = { retries: 0, timeoutMs: 8000 } as const;
 export async function fetchContacts(
   domain: string,
   opts: { live: boolean },
-): Promise<Contacts | null> {
+): Promise<FetchedContacts | null> {
   if (opts.live) {
-    const merged: Contacts = { emails: [], phones: [] };
+    const merged: FetchedContacts = { emails: [], phones: [], text: "" };
     for (const path of CONTACT_PATHS) {
       try {
-        const c = extractContacts(await politeGet(`https://${domain}${path}`, SCRAPE_OPTS));
+        const html = await politeGet(`https://${domain}${path}`, SCRAPE_OPTS);
+        const c = extractContacts(html);
+        if (!merged.text) merged.text = extractCategoryText(html); // homepage is first → its text
         for (const e of c.emails) if (!merged.emails.includes(e)) merged.emails.push(e);
         for (const p of c.phones) if (!merged.phones.includes(p)) merged.phones.push(p);
         if (merged.emails.length) break; // email found → done (the priority field)
@@ -38,5 +46,6 @@ export async function fetchContacts(
 
   const file = join(here, "fixtures", "contact", `${domain}.html`);
   if (!existsSync(file)) return null;
-  return extractContacts(readFileSync(file, "utf8"));
+  const html = readFileSync(file, "utf8");
+  return { ...extractContacts(html), text: extractCategoryText(html) };
 }
